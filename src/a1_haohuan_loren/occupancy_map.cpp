@@ -2,12 +2,15 @@
 #include <math.h>
 #include <math/point.hpp>
 
+static int OCCUPANCY_MAP_PATH_UPDATE = 4;
+static int OCCUPANCY_MAP_END_UPDATE = 20;
+
 occupancy_map::occupancy_map(float wInMeters, float hInMeters, float mPerCell, float s_rate){
     grid = eecs467::OccupancyGrid(wInMeters,hInMeters,mPerCell);
     sampling_rate = s_rate;
 }
 
-void occupancy_map::update(std::deque<maebot_laser> lasers){
+void occupancy_map::update(std::vector<maebot_laser> lasers){
     //printf("update map: %d\n",lasers.size());
     float SAMPLE_SPACING = sampling_rate * grid.metersPerCell();
     for(int i=0;i<lasers.size();++i){
@@ -24,14 +27,14 @@ void occupancy_map::update(std::deque<maebot_laser> lasers){
         eecs467::Point<int> sample_cell;        
         for(float sample_m = 0; sample_m < l.get_range(); sample_m += SAMPLE_SPACING){
             sample_cell = global_position_to_grid_cell(eecs467::Point<float>(sample_x,sample_y),grid);
-            if(grid.isCellInGrid(sample_cell.y,sample_cell.x)){
-                int8_t odds = grid.logOdds(sample_cell.y,sample_cell.x); 
-                if(odds < (-128+2)){
-                    grid.setLogOdds(sample_cell.y,sample_cell.x,-128);
+            if(grid.isCellInGrid(sample_cell.x,sample_cell.y)){
+                int8_t odds = grid.logOdds(sample_cell.x,sample_cell.y); 
+                if(odds < (-128+OCCUPANCY_MAP_PATH_UPDATE)){
+                    grid.setLogOdds(sample_cell.x,sample_cell.y,-128);
                 }
                 else{
-                    odds -= 2;
-                    grid.setLogOdds(sample_cell.y,sample_cell.x,odds);
+                    odds -= OCCUPANCY_MAP_PATH_UPDATE;
+                    grid.setLogOdds(sample_cell.x,sample_cell.y,odds);
                 }
             } 
             sample_x += dx;
@@ -41,14 +44,14 @@ void occupancy_map::update(std::deque<maebot_laser> lasers){
         sample_x = l.get_x_pos() + l.get_range()*cosf(theta);
         sample_y = l.get_y_pos() + l.get_range()*sinf(theta);
         sample_cell = global_position_to_grid_cell(eecs467::Point<float>(sample_x,sample_y),grid);
-        if(grid.isCellInGrid(sample_cell.y,sample_cell.x)){
-            int8_t odds = grid.logOdds(sample_cell.y,sample_cell.x); 
-            if(odds > (127-2)){
-                grid.setLogOdds(sample_cell.y,sample_cell.x,127);
+        if(grid.isCellInGrid(sample_cell.x,sample_cell.y)){
+            int8_t odds = grid.logOdds(sample_cell.x,sample_cell.y); 
+            if(odds > (127-OCCUPANCY_MAP_END_UPDATE)){
+                grid.setLogOdds(sample_cell.x,sample_cell.y,127);
             }
             else{
-                odds += 2;
-                grid.setLogOdds(sample_cell.y,sample_cell.x,odds);
+                odds += OCCUPANCY_MAP_END_UPDATE;
+                grid.setLogOdds(sample_cell.x,sample_cell.y,odds);
             }
         } 
 
