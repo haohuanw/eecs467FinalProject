@@ -6,21 +6,30 @@
 
 #include <lcm/lcm_coretypes.h>
 
-#ifndef __dynamixel_command_t_hpp__
-#define __dynamixel_command_t_hpp__
+#ifndef __maebot_occupancy_grid_t_hpp__
+#define __maebot_occupancy_grid_t_hpp__
+
+#include <vector>
 
 
-
-class dynamixel_command_t
+class maebot_occupancy_grid_t
 {
     public:
         int64_t    utime;
 
-        double     position_radians;
+        float      origin_x;
 
-        double     speed;
+        float      origin_y;
 
-        double     max_torque;
+        float      meters_per_cell;
+
+        int32_t    width;
+
+        int32_t    height;
+
+        int32_t    num_cells;
+
+        std::vector< int8_t > cells;
 
     public:
         /**
@@ -58,7 +67,7 @@ class dynamixel_command_t
         inline static int64_t getHash();
 
         /**
-         * Returns "dynamixel_command_t"
+         * Returns "maebot_occupancy_grid_t"
          */
         inline static const char* getTypeName();
 
@@ -69,7 +78,7 @@ class dynamixel_command_t
         inline static int64_t _computeHash(const __lcm_hash_ptr *p);
 };
 
-int dynamixel_command_t::encode(void *buf, int offset, int maxlen) const
+int maebot_occupancy_grid_t::encode(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
     int64_t hash = getHash();
@@ -83,7 +92,7 @@ int dynamixel_command_t::encode(void *buf, int offset, int maxlen) const
     return pos;
 }
 
-int dynamixel_command_t::decode(const void *buf, int offset, int maxlen)
+int maebot_occupancy_grid_t::decode(const void *buf, int offset, int maxlen)
 {
     int pos = 0, thislen;
 
@@ -98,73 +107,106 @@ int dynamixel_command_t::decode(const void *buf, int offset, int maxlen)
     return pos;
 }
 
-int dynamixel_command_t::getEncodedSize() const
+int maebot_occupancy_grid_t::getEncodedSize() const
 {
     return 8 + _getEncodedSizeNoHash();
 }
 
-int64_t dynamixel_command_t::getHash()
+int64_t maebot_occupancy_grid_t::getHash()
 {
     static int64_t hash = _computeHash(NULL);
     return hash;
 }
 
-const char* dynamixel_command_t::getTypeName()
+const char* maebot_occupancy_grid_t::getTypeName()
 {
-    return "dynamixel_command_t";
+    return "maebot_occupancy_grid_t";
 }
 
-int dynamixel_command_t::_encodeNoHash(void *buf, int offset, int maxlen) const
+int maebot_occupancy_grid_t::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
     tlen = __int64_t_encode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->position_radians, 1);
+    tlen = __float_encode_array(buf, offset + pos, maxlen - pos, &this->origin_x, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->speed, 1);
+    tlen = __float_encode_array(buf, offset + pos, maxlen - pos, &this->origin_y, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->max_torque, 1);
+    tlen = __float_encode_array(buf, offset + pos, maxlen - pos, &this->meters_per_cell, 1);
     if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_encode_array(buf, offset + pos, maxlen - pos, &this->width, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_encode_array(buf, offset + pos, maxlen - pos, &this->height, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_encode_array(buf, offset + pos, maxlen - pos, &this->num_cells, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    if(this->num_cells > 0) {
+        tlen = __int8_t_encode_array(buf, offset + pos, maxlen - pos, &this->cells[0], this->num_cells);
+        if(tlen < 0) return tlen; else pos += tlen;
+    }
 
     return pos;
 }
 
-int dynamixel_command_t::_decodeNoHash(const void *buf, int offset, int maxlen)
+int maebot_occupancy_grid_t::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
 
     tlen = __int64_t_decode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->position_radians, 1);
+    tlen = __float_decode_array(buf, offset + pos, maxlen - pos, &this->origin_x, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->speed, 1);
+    tlen = __float_decode_array(buf, offset + pos, maxlen - pos, &this->origin_y, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->max_torque, 1);
+    tlen = __float_decode_array(buf, offset + pos, maxlen - pos, &this->meters_per_cell, 1);
     if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_decode_array(buf, offset + pos, maxlen - pos, &this->width, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_decode_array(buf, offset + pos, maxlen - pos, &this->height, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    tlen = __int32_t_decode_array(buf, offset + pos, maxlen - pos, &this->num_cells, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
+    if(this->num_cells) {
+        this->cells.resize(this->num_cells);
+        tlen = __int8_t_decode_array(buf, offset + pos, maxlen - pos, &this->cells[0], this->num_cells);
+        if(tlen < 0) return tlen; else pos += tlen;
+    }
 
     return pos;
 }
 
-int dynamixel_command_t::_getEncodedSizeNoHash() const
+int maebot_occupancy_grid_t::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
     enc_size += __int64_t_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __float_encoded_array_size(NULL, 1);
+    enc_size += __float_encoded_array_size(NULL, 1);
+    enc_size += __float_encoded_array_size(NULL, 1);
+    enc_size += __int32_t_encoded_array_size(NULL, 1);
+    enc_size += __int32_t_encoded_array_size(NULL, 1);
+    enc_size += __int32_t_encoded_array_size(NULL, 1);
+    enc_size += __int8_t_encoded_array_size(NULL, this->num_cells);
     return enc_size;
 }
 
-int64_t dynamixel_command_t::_computeHash(const __lcm_hash_ptr *)
+int64_t maebot_occupancy_grid_t::_computeHash(const __lcm_hash_ptr *)
 {
-    int64_t hash = 0x94bff3111878405eLL;
+    int64_t hash = 0x6aa23f24a5336649LL;
     return (hash<<1) + ((hash>>63)&1);
 }
 

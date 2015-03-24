@@ -6,21 +6,17 @@
 
 #include <lcm/lcm_coretypes.h>
 
-#ifndef __dynamixel_command_t_hpp__
-#define __dynamixel_command_t_hpp__
+#ifndef __ttt_turn_t_hpp__
+#define __ttt_turn_t_hpp__
 
 
 
-class dynamixel_command_t
+class ttt_turn_t
 {
     public:
         int64_t    utime;
 
-        double     position_radians;
-
-        double     speed;
-
-        double     max_torque;
+        int32_t    turn;
 
     public:
         /**
@@ -58,7 +54,7 @@ class dynamixel_command_t
         inline static int64_t getHash();
 
         /**
-         * Returns "dynamixel_command_t"
+         * Returns "ttt_turn_t"
          */
         inline static const char* getTypeName();
 
@@ -69,7 +65,7 @@ class dynamixel_command_t
         inline static int64_t _computeHash(const __lcm_hash_ptr *p);
 };
 
-int dynamixel_command_t::encode(void *buf, int offset, int maxlen) const
+int ttt_turn_t::encode(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
     int64_t hash = getHash();
@@ -83,7 +79,7 @@ int dynamixel_command_t::encode(void *buf, int offset, int maxlen) const
     return pos;
 }
 
-int dynamixel_command_t::decode(const void *buf, int offset, int maxlen)
+int ttt_turn_t::decode(const void *buf, int offset, int maxlen)
 {
     int pos = 0, thislen;
 
@@ -98,73 +94,59 @@ int dynamixel_command_t::decode(const void *buf, int offset, int maxlen)
     return pos;
 }
 
-int dynamixel_command_t::getEncodedSize() const
+int ttt_turn_t::getEncodedSize() const
 {
     return 8 + _getEncodedSizeNoHash();
 }
 
-int64_t dynamixel_command_t::getHash()
+int64_t ttt_turn_t::getHash()
 {
     static int64_t hash = _computeHash(NULL);
     return hash;
 }
 
-const char* dynamixel_command_t::getTypeName()
+const char* ttt_turn_t::getTypeName()
 {
-    return "dynamixel_command_t";
+    return "ttt_turn_t";
 }
 
-int dynamixel_command_t::_encodeNoHash(void *buf, int offset, int maxlen) const
+int ttt_turn_t::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
     tlen = __int64_t_encode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->position_radians, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->speed, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->max_torque, 1);
+    tlen = __int32_t_encode_array(buf, offset + pos, maxlen - pos, &this->turn, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
     return pos;
 }
 
-int dynamixel_command_t::_decodeNoHash(const void *buf, int offset, int maxlen)
+int ttt_turn_t::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
 
     tlen = __int64_t_decode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->position_radians, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->speed, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->max_torque, 1);
+    tlen = __int32_t_decode_array(buf, offset + pos, maxlen - pos, &this->turn, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
     return pos;
 }
 
-int dynamixel_command_t::_getEncodedSizeNoHash() const
+int ttt_turn_t::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
     enc_size += __int64_t_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __int32_t_encoded_array_size(NULL, 1);
     return enc_size;
 }
 
-int64_t dynamixel_command_t::_computeHash(const __lcm_hash_ptr *)
+int64_t ttt_turn_t::_computeHash(const __lcm_hash_ptr *)
 {
-    int64_t hash = 0x94bff3111878405eLL;
+    int64_t hash = 0xb83f190199407903LL;
     return (hash<<1) + ((hash>>63)&1);
 }
 
