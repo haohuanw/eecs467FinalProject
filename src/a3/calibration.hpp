@@ -23,7 +23,6 @@ public:
   void read_green_range(char* filename);
   void read_red_range(char* filename);
   void read_mask(char* filename);
-  void read_default_all();
   max_min_hsv get_cyan();
   max_min_hsv get_green();
   max_min_hsv get_red();

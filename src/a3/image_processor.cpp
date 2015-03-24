@@ -6,25 +6,36 @@
 #include <deque>
 #define BLACK 0xff000000
 void image_processor::image_masking(image_u32_t *im,float x1,float x2,float y1, float y2){
-    uint32_t black = 0xff000000;
     for (int y = 0; y < im->height; ++y) {
         for (int x = 0; x < im->width; ++x) {
             if(x<x1 || x>x2 || y<(im->height-y2) || y>(im->height-y1)){
-                im->buf[y*im->stride + x] = black;
+                im->buf[y*im->stride + x] = BLACK;
             }
         }
     }  
 }
 
+void image_processor::image_copy(image_u32_t *im,image_u32_t *im_copy_from,float x1,float x2,float y1,float y2){
+    if((im->height > im_copy_from->height) || (im->width > im_copy_from->width)){
+        printf("image copy error, mask have problem");
+        exit(1);
+    }
+    int real_y1 = (int)(im_copy_from->height - y2);
+    int real_y2 = (int)(im_copy_from->width - y1);
+    for(int y = real_y1;y<=real_y2;++y){
+        for(int x = (int)x1;x<=(int)x2;++x){
+            im->buf[(y-real_y1)*im->stride + (x-(int)x1)] 
+                = im_copy_from->buf[y*im->stride+x];
+        }
+    }
+}
+
 std::vector<int> image_processor::blob_detection(image_u32_t *im, float x1,float x2,float y1,float y2,max_min_hsv color){
-    uint32_t black = 0xff000000;
     hsv_color_t tmp_hsv;
     hsv_color_t max_hsv = color.get_max_HSV();
     hsv_color_t min_hsv = color.get_min_HSV();
     int real_y1 = (int)(im->height - y2);
     int real_y2 = (int)(im->height - y1);
-    int real_height = real_y2-real_y1+1;
-    int real_width = x2-x1+1;
     //initialize with all 0 => black
     int im_section[im->height * im->width];
     std::deque<int> not_black_pos;
@@ -120,7 +131,7 @@ std::vector<int> image_processor::blob_detection(image_u32_t *im, float x1,float
                     x_min = point_x;
                 }
             }
-            float radius = ((x_max-x_min+1)+(y_max-y_min+1))/4.0;
+            //float radius = ((x_max-x_min+1)+(y_max-y_min+1))/4.0;
             int center_x = (x_max+x_min)/2;
             int center_y = (y_max+y_min)/2;
             int center_pos = center_y*im->width + center_x;

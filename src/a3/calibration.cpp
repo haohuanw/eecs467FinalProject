@@ -69,14 +69,6 @@ void calibration_t::read_mask(char* filename){
     } 
 }
 
-void calibration_t::read_default_all(){
-    read_tx_mat("transform_elements.txt");
-    read_mask("mask_rect.txt");
-    read_cyan_range("cyan_hsv_range.txt");
-    read_red_range("red_hsv_range.txt");
-    read_green_range("green_hsv_range.txt");
-}
-
 max_min_hsv calibration_t::get_cyan(){
     return cyan_range;
 }
@@ -94,15 +86,15 @@ std::vector<float> calibration_t::get_mask(){
 }
 
 eecs467::Point<double> calibration_t::translate(eecs467::Point<double> cam_coords){
-    eecs467::Point<double> ground_in_arm;
-    ground_in_arm.x = 
+    eecs467::Point<double> ground_in_world;
+    ground_in_world.x = 
             matd_get(tx_mat, 0, 0)*cam_coords.x
             + matd_get(tx_mat, 0, 1)*cam_coords.y 
             + matd_get(tx_mat, 0, 2)*1.0;
-    ground_in_arm.y = 
+    ground_in_world.y = 
             matd_get(tx_mat, 1, 0)*cam_coords.x 
             + matd_get(tx_mat, 1, 1)*cam_coords.y 
             + matd_get(tx_mat, 1, 2)*1.0;
-    return ground_in_arm; 
+    return ground_in_world; 
 }
 

@@ -299,7 +299,7 @@ int main(int argc, char ** argv)
         printf ("URL: %s\n", state.pic_url);
     }
     else{
-        printf("camera find\n");
+        printf("camera finding\n");
         zarray_t *urls = image_source_enumerate();
         if(0 == zarray_size(urls)){
             printf("No camera found.\n");

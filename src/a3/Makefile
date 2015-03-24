@@ -7,7 +7,7 @@ CXXFLAGS = $(CXXFLAGS_STD) \
      $(CFLAGS_COMMON) \
      $(CFLAGS_LCMTYPES) \
      $(CFLAGS_GSL) \
-     -O3
+     -O3 -w
 LDFLAGS  = $(LDFLAGS_STD) \
 	$(LDFLAGS_VX_GTK) \
 	  $(LDFLAGS_IMAGESOURCE) \
@@ -24,8 +24,9 @@ LIBDEPS  = $(call libdeps, $(LDFLAGS))
 BIN_MASK = $(BIN_PATH)/mask
 BIN_COLOR_PICKER = $(BIN_PATH)/color_picker
 BIN_BLOB_DETECTOR = $(BIN_PATH)/blob_detector
+BIN_UI = $(BIN_PATH)/ui
 
-ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR)
+ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI)
 
 all: $(ALL)
 
@@ -42,6 +43,10 @@ $(BIN_COLOR_PICKER): color_picker.o $(LIB_A3) $(LIBDEPS)
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BIN_BLOB_DETECTOR): blob_detector.o $(LIB_A3) $(LIBDEPS)
+	@echo "\t$@"
+	@$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(BIN_UI): ui.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
