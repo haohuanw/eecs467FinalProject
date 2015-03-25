@@ -46,7 +46,7 @@ class state_t{
         pthread_mutex_t         data_mutex;
         pthread_t               animate_thread;
     public:
-        state_t(){
+        state_t():camera_vx("camera frame"),occupancy_grid_vx("Occupancy Grid frame"){
             //GUI init
             //camera_vx.vx_world = vx_world_create();
             //occupancy_grid_vx.vx_world = vx_world_create();
@@ -153,6 +153,14 @@ static void* render_loop(void *data){
             }
             fflush(stdout);
             isrc->release_frame(isrc,frmd);
+        }
+        eecs467::Point<float> camera_click_point = state->camera_vx.get_click_point();
+        if(camera_click_point.x != -1 && camera_click_point.y!= -1){
+            printf("Camera frame: added a way point at: %6.3f %6.3f\n",camera_click_point.x,camera_click_point.y);
+        }
+        eecs467::Point<float> og_click_point = state->occupancy_grid_vx.get_click_point();
+        if(og_click_point.x != -1 && og_click_point.y!= -1){
+            printf("Occupancy Grid frame: added a way point at: %6.3f %6.3f\n",og_click_point.x,og_click_point.y);
         }
         if(im != NULL){
             vx_object_t *vim = vxo_image_from_u32(im,
