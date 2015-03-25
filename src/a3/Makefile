@@ -19,6 +19,8 @@ LDFLAGS  = $(LDFLAGS_STD) \
 LIB_A3 = $(LIB_PATH)/liba3.a
 LIB_A3_OBJ = hsv.o image_processor.o calibration.o
 
+LIB_MAPPING = $(LIB_PATH)/libmapping.a
+
 LIBDEPS  = $(call libdeps, $(LDFLAGS))
 
 BIN_MASK = $(BIN_PATH)/mask
@@ -46,7 +48,7 @@ $(BIN_BLOB_DETECTOR): blob_detector.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
-$(BIN_UI): ui.o $(LIB_A3) $(LIBDEPS)
+$(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
