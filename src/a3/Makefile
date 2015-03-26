@@ -7,7 +7,7 @@ CXXFLAGS = $(CXXFLAGS_STD) \
      $(CFLAGS_COMMON) \
      $(CFLAGS_LCMTYPES) \
      $(CFLAGS_GSL) \
-     -O3 -w
+     -g
 LDFLAGS  = $(LDFLAGS_STD) \
 	$(LDFLAGS_VX_GTK) \
 	  $(LDFLAGS_IMAGESOURCE) \
@@ -17,7 +17,7 @@ LDFLAGS  = $(LDFLAGS_STD) \
 		$(LDFLAGS_GSL)
 
 LIB_A3 = $(LIB_PATH)/liba3.a
-LIB_A3_OBJ = hsv.o image_processor.o calibration.o vx_state_t.o
+LIB_A3_OBJ = hsv.o image_processor.o calibration.o vx_state_t.o Navigator.o
 
 LIB_MAPPING = $(LIB_PATH)/libmapping.a
 
@@ -27,8 +27,9 @@ BIN_MASK = $(BIN_PATH)/mask
 BIN_COLOR_PICKER = $(BIN_PATH)/color_picker
 BIN_BLOB_DETECTOR = $(BIN_PATH)/blob_detector
 BIN_UI = $(BIN_PATH)/ui
+BIN_NAVIGATOR_TEST = $(BIN_PATH)/navigator_test
 
-ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI)
+ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI) $(BIN_NAVIGATOR_TEST)
 
 all: $(ALL)
 
@@ -49,6 +50,10 @@ $(BIN_BLOB_DETECTOR): blob_detector.o $(LIB_A3) $(LIBDEPS)
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
+	@echo "\t$@"
+	@$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(BIN_NAVIGATOR_TEST): navigatorTest.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
