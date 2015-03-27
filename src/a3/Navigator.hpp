@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <unordered_set>
 #include <queue>
+#include <cassert>
+#include <utility>
+#include <cfloat>
 
 struct vnode
 {
@@ -25,6 +28,13 @@ struct point
     double y;
 };
 
+struct line
+{
+    point start;
+    point end;
+    double m;
+};
+
 struct vnode_path
 {
     double x;
@@ -39,6 +49,7 @@ class Navigator
 {
     private:
         std::vector<vnode> diagram;
+        std::vector<line> diagram_lines;
 
         double dist(vnode_path *a, vnode_path *b);
         double heuristic(vnode_path *a, vnode_path *b);
@@ -46,6 +57,10 @@ class Navigator
         //void reconstructPath(vnode_path *end_node, std::vector<point>& path);
         void reconstructPath(vnode_path *end_node, std::vector<point>& path, std::vector<vnode_path>& nodes);
         void reverse(std::vector<point>& path);
+        std::pair<int, point> findClosestLine(point p);
+        point findClosestStart(point p);
+        std::pair<point, point> findClosestEnd(point p);
+        bool isSamePoint(point a, point b);
 
         bool vnodeIsEqual(vnode& a, point& b);
         void printPath(std::vector<vnode_path>& nodes);

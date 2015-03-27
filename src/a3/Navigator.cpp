@@ -23,6 +23,9 @@ Navigator::Navigator(std::string filename)
     while(input >> index1 >> index2)
     {
         diagram[index1].neighbors.push_back(index2);
+        line l = {{diagram[index1].x, diagram[index1].y}, {diagram[index2].x, diagram[index2].y}, 0};
+        l.m = ((l.start.x == l.end.x) ? HUGE_VAL : 0);
+        diagram_lines.push_back(l);
     }
 }
 
@@ -30,12 +33,11 @@ Navigator::~Navigator()
 {
 }
 
-std::vector<point> Navigator::pathPlan(point start, point end)
+std::vector<point> Navigator::pathPlan(point real_start, point end)
 {
     vnode_path *start_node, *end_node;
-    // TODO: implement find_closest_end
-    //vnode closest_end = find_closest_end(end);
-    point closest_end = end;
+    std::pair<point, point> end_pair = findClosestEnd(end);
+    point start = findClosestStart(real_start);
     std::vector<vnode_path> nodes;
     nodes.resize(diagram.size());
     for(uint i = 0; i < diagram.size(); i++)
@@ -43,7 +45,7 @@ std::vector<point> Navigator::pathPlan(point start, point end)
         vnode_path v = {diagram[i].x, diagram[i].y, i, HUGE_VAL, HUGE_VAL, -1};
         nodes[i] = v;
         if(vnodeIsEqual(diagram[i], start)) { start_node = &nodes[i]; }
-        if(vnodeIsEqual(diagram[i], closest_end)) { end_node = &nodes[i]; }
+        if(vnodeIsEqual(diagram[i], end_pair.first)) { end_node = &nodes[i]; }
     }
     
     std::unordered_set<vnode_path*> closed_set;
@@ -62,6 +64,7 @@ std::vector<point> Navigator::pathPlan(point start, point end)
         {
             std::vector<point> path;
             reconstructPath(current, path, nodes);
+            path.push_back(end_pair.second);
             return path;
         }
         open_set.pop();
@@ -90,6 +93,82 @@ std::vector<point> Navigator::pathPlan(point start, point end)
         } // for
     } // while
     std::vector<point> retval;
+    return retval;
+}
+
+point Navigator::findClosestStart(point p)
+{
+    std::pair<int, point> retval = findClosestLine(p);
+    if(isSamePoint(diagram_lines[retval.first].start, p)) return p;
+    return diagram_lines[retval.first].end;
+}
+
+// retval: closest node, actual endpoint
+std::pair<point, point> Navigator::findClosestEnd(point p)
+{
+    std::pair<int, point> retval = findClosestLine(p);
+    if(isSamePoint(diagram_lines[retval.first].end, p)) return std::make_pair(p, p);
+    return std::make_pair(diagram_lines[retval.first].start, retval.second);
+}
+
+bool Navigator::isSamePoint(point a, point b)
+{
+    return a.x == b.x && a.y == b.y;
+}
+
+std::pair<int,point> Navigator::findClosestLine(point p)
+{
+    // find distances from point to lines
+    std::vector<double> distances(diagram_lines.size(), -1);
+    for(uint i = 0; i < diagram_lines.size(); i++)
+    {
+        if(diagram_lines[i].m == 0) // horizontal line
+        {
+            // if p.x is between start and end points of diagram_lines[i]
+            if((p.x >= diagram_lines[i].start.x && p.x <= diagram_lines[i].end.x) ||
+               (p.x <= diagram_lines[i].start.x && p.x >= diagram_lines[i].end.x))
+            {
+                point intersect = {p.x, diagram_lines[i].start.y};
+                distances[i] = fabs(intersect.y - p.y);
+            }
+        }
+        else // vertical line
+        {
+            if((p.y >= diagram_lines[i].start.y && p.y <= diagram_lines[i].end.y) ||
+               (p.y <= diagram_lines[i].start.y && p.y >= diagram_lines[i].end.y))
+            {
+                point intersect = {diagram_lines[i].start.x, p.y};
+                distances[i] = fabs(intersect.x - p.x);
+            }
+        }
+    }
+
+    // find smallest distance
+    double dist = DBL_MAX;
+    int index = -1;
+    for(uint i = 0; i < distances.size(); i++)
+    {
+        if(distances[i] < dist && distances[i] != -1)
+        {
+            dist = distances[i];
+            index = i;
+        }
+    }
+    assert(index != -1);
+    point intersect;
+    if(diagram_lines[index].m == 0)
+    {
+        intersect.x = p.x;
+        intersect.y = diagram_lines[index].start.y;
+    }
+    else
+    {
+        intersect.x = diagram_lines[index].start.x;
+        intersect.y = p.y;
+    }
+    std::pair<int, point> retval(index, intersect);
+    std::cout << "distance: " << dist << std::endl;
+    std::cout << "index:    " << index << std::endl;
     return retval;
 }
 
@@ -159,6 +238,7 @@ bool Navigator::vnodeIsEqual(vnode& a, point& b)
 
 void Navigator::printDiagram()
 {
+    // print nodes
     std::cout << "Nodes: " << std::endl;
     for(uint i = 0; i < diagram.size(); i++)
     {
@@ -168,5 +248,14 @@ void Navigator::printDiagram()
                       << diagram[diagram[i].neighbors[j]].x << ", "
                       << diagram[diagram[i].neighbors[j]].y << ")" << std::endl;
         }
+    }
+
+    // print lines
+    std::cout << "\nLines: \n";
+    for(uint i = 0; i < diagram_lines.size(); i++)
+    {
+        std::cout << "{(" << diagram_lines[i].start.x << ", " << diagram_lines[i].start.y
+                  << "), (" << diagram_lines[i].end.x << ", " << diagram_lines[i].end.y
+                  << "), " << diagram_lines[i].m << "}\n";
     }
 }

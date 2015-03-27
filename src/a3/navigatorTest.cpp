@@ -12,17 +12,33 @@ void print(std::vector<point>& path)
     std::cout << std::endl;
 }
 
+/*void printPoint(std::pair<int, point>& p)
+{
+    std::cout << "(" << p.first << ", " << p.second.x << ", " << p.second.y << ")\n";
+}*/
+
 int main()
 {
     Navigator n("../ground_truth/vmap.txt");
-    //n.printDiagram();
+    n.printDiagram();
 
     point a = {-0.75, 1.375};
-    point b = {-0.75, 0.25};
+    point b = {-0.75, 0.3};
     std::vector<point> path = n.pathPlan(a, b);
     print(path);
 
-    b.y = -0.125;
+    b.y = 0.25;
+    path = n.pathPlan(a, b);
+    print(path);
+
+    a.x = -0.7;
+    a.y = 1.1;
+    b.x = -0.6;
+    b.y = -1.1;
+    path = n.pathPlan(a, b);
+    print(path);
+
+    /*b.y = -0.125;
     std::vector<point> path2 = n.pathPlan(a, b);
     print(path2);
 
@@ -49,7 +65,28 @@ int main()
     b.x = -0.75;
     b.y = 0.125;
     path2 = n.pathPlan(a, b);
-    print(path2);
+    print(path2);*/
+
+    /*a.x = 0;
+    a.y = 1.35;
+    std::pair<int, point> retval;
+    retval = n.findClosestLine(a);
+    printPoint(retval);
+
+    a.x = 0;
+    a.y = 0.1;
+    retval = n.findClosestLine(a);
+    printPoint(retval);
+
+    a.x = -0.5;
+    a.y = -0.12;
+    retval = n.findClosestLine(a);
+    printPoint(retval);
+
+    a.x = -0.5625;
+    a.y = -0.125 - 0.0626;
+    retval = n.findClosestLine(a);
+    printPoint(retval);*/
 
     return 0;
 }
