@@ -85,7 +85,7 @@ class state_t
             FILE *fp = fopen("../calibration/mask_rect.txt","r");
             fscanf(fp,"%f %f %f %f\n",&corner_coords[0].x,&corner_coords[1].x,&corner_coords[0].y,&corner_coords[1].y);
             printf("coord: %f %f %f %f\n",corner_coords[0].x,corner_coords[1].x,corner_coords[0].y,corner_coords[1].y);
-            red_hsv.read_hsv_from_file("../calibration/red_hsv_range.txt");
+            red_hsv.read_hsv_from_file("../calibration/red_maebot_range.txt");
             green_hsv.read_hsv_from_file("../calibration/green_hsv_range.txt");
 	    cyan_hsv.read_hsv_from_file("../calibration/cyan_hsv_range.txt");
         }
