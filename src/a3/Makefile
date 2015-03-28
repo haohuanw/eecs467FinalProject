@@ -28,8 +28,9 @@ BIN_COLOR_PICKER = $(BIN_PATH)/color_picker
 BIN_BLOB_DETECTOR = $(BIN_PATH)/blob_detector
 BIN_UI = $(BIN_PATH)/ui
 BIN_NAVIGATOR_TEST = $(BIN_PATH)/navigator_test
+BIN_BOT_DRIVER = $(BIN_PATH)/bot_driver
 
-ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI) $(BIN_NAVIGATOR_TEST)
+ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI) $(BIN_NAVIGATOR_TEST) $(BIN_BOT_DRIVER)
 
 all: $(ALL)
 
@@ -54,6 +55,10 @@ $(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BIN_NAVIGATOR_TEST): navigatorTest.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
+	@echo "\t$@"
+	@$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(BIN_BOT_DRIVER): bot_driver.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
