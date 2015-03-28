@@ -39,6 +39,14 @@ class state_t{
         //vx_state_t og_vx;
         vx_state_t              camera_vx;
         vx_state_t              occupancy_grid_vx;
+        /*TODO
+         * add vxapp vxworld layers and pg listener to initilize third
+         * window
+         * add maebot list and calibration
+         * maebot should be a struct with point, waypoints(in world coord), path and hsv range
+         * add maebot_button_selected to be able to switch between
+         * different maebot
+         */
         char                    *camera_url;
         eecs467::OccupancyGrid   occupancy_grid;
         //image_processor im_processor;
@@ -60,6 +68,12 @@ class state_t{
             //occupancy_grid_vx.vx_app.display_finished = display_finished;
 
             //layers = zhash_create(sizeof(vx_display_t*), sizeof(vx_layer_t*), zhash_ptr_hash, zhash_ptr_equals);
+            /*TODO
+            * initGUI
+            *
+            * init maebot list
+            * init pg
+            */
             occupancy_grid = eecs467::OccupancyGrid(5.0,5.0,0.05);
             read_map("../ground_truth/figure_eight.txt");
             pthread_mutex_init(&mutex,NULL);
@@ -68,11 +82,18 @@ class state_t{
 
         ~state_t(){
             //vx_world_destroy(camera_vx.vx_world);
-            //vx_world_destroy(occupancy_grid_vx.vx_world);       
+            //vx_world_destroy(occupancy_grid_vx.vx_world);
+            /*TODO
+             *Destory accordingly
+             *
+             *
+             */       
             pthread_mutex_destroy(&mutex);
             pthread_mutex_destroy(&data_mutex);
         }
-
+        /*TODO
+        * add pg handler here
+        */
         void read_map(char *addr){
             FILE *fp;
             uint8_t temp;
@@ -156,12 +177,26 @@ static void* render_loop(void *data){
         }
         eecs467::Point<float> camera_click_point = state->camera_vx.get_click_point();
         if(camera_click_point.x != -1 && camera_click_point.y!= -1){
+            /*TODO
+            * add way point accordingly to the vector with the transformation
+            */
             printf("Camera frame: added a way point at: %6.3f %6.3f\n",camera_click_point.x,camera_click_point.y);
         }
         eecs467::Point<float> og_click_point = state->occupancy_grid_vx.get_click_point();
         if(og_click_point.x != -1 && og_click_point.y!= -1){
+            /*TODO
+            * add way point accordingly to the vector with the transformation
+            */
             printf("Occupancy Grid frame: added a way point at: %6.3f %6.3f\n",og_click_point.x,og_click_point.y);
         }
+        /*TODO
+        * if there is a way point of selected maebot, display it
+        */
+        /*TODO
+        * has way points? path planning to calculate the path
+        * cat them in one path
+        * and display it
+        */
         if(im != NULL){
             vx_object_t *vim = vxo_image_from_u32(im,
                     VXO_IMAGE_FLIPY,
