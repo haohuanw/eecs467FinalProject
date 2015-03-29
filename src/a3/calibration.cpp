@@ -17,7 +17,7 @@ calibration_t::~calibration_t(){
 }
 
 
-void calibration_t::read_tx_mat(char* filename){
+void calibration_t::read_tx_mat(char const* filename){
   std::ifstream f(filename);
   double e[6];
   if(f != NULL){

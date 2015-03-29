@@ -18,7 +18,7 @@ private:
 public:
   calibration_t();
   ~calibration_t();
-  void read_tx_mat(char* filename);
+  void read_tx_mat(char const* filename);
   void read_cyan_range(char* filename);
   void read_green_range(char* filename);
   void read_red_range(char* filename);
