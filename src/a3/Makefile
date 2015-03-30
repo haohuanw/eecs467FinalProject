@@ -28,9 +28,15 @@ BIN_COLOR_PICKER = $(BIN_PATH)/color_picker
 BIN_BLOB_DETECTOR = $(BIN_PATH)/blob_detector
 BIN_UI = $(BIN_PATH)/ui
 BIN_NAVIGATOR_TEST = $(BIN_PATH)/navigator_test
+#<<<<<<< HEAD
 BIN_BOT_DRIVER = $(BIN_PATH)/bot_driver
 
 ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_UI) $(BIN_NAVIGATOR_TEST) $(BIN_BOT_DRIVER)
+#=======
+BIN_IMAGE_TO_WORLD_COORD = $(BIN_PATH)/image_to_world_coord
+
+#ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_NAVIGATOR_TEST)
+#>>>>>>> 4332e07e3cc60e1543539cbdc9270cd195288911
 
 all: $(ALL)
 
@@ -47,6 +53,10 @@ $(BIN_COLOR_PICKER): color_picker.o $(LIB_A3) $(LIBDEPS)
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BIN_BLOB_DETECTOR): blob_detector.o $(LIB_A3) $(LIBDEPS)
+	@echo "\t$@"
+	@$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(BIN_IMAGE_TO_WORLD_COORD): image_to_world_coord.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
