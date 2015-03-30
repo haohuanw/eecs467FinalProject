@@ -182,6 +182,121 @@ struct Motion_Class{
 	    //return true;
 	}
 
+	void go_straight(){
+
+		uint64_t time;
+		maebot_motor_command_t msg;
+	    maebot_motor_command_t *msg_ptr = &msg; 
+
+	    pthread_mutex_lock(&comms_m);
+	    double x_origin = read.x_rob;
+	    double y_origin = read.y_rob;
+	    double theta_origin = read.theta_rob;
+	    pthread_mutex_unlock(&comms_m);
+
+	    double x_current = x_origin;
+	    double y_current = y_origin;
+	    double theta_current = theta_origin;
+
+	    double x_dest = 1.0;
+	    double y_dest = 0.0;
+	    double theta_dest = 0.0;
+
+	    double left_speed =  0.2;
+	    double right_speed = 0.193;
+
+	    
+	    while(x_dest > x_current){
+
+	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
+
+	    	//IF WE'RE ON THE LEFT SIDE OF THE LANE, CORRECT BY MOVING RIGHT
+	    	/*if( y_current - y_origin > 0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5 ){
+	    		cout << "far left" << endl;
+	    		if(left_speed < 0.18)
+	    			left_speed += 0.0002;
+	    		else if(right_speed > 0.14)
+	    			right_speed -= 0.0002;
+		    	
+			}
+			//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
+			else if( y_current - y_origin < -0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5) {
+
+				cout << "far right" << endl;
+	    		if(left_speed > 0.14)
+		    		left_speed -= 0.0002;
+		    	else if( right_speed < 0.18)
+		    		right_speed += 0.0002;
+		    	
+			}*/
+			//IF WE'RE VEERING RIGHT, CORRECT BY GOING LEFT
+			if( (180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI > 3.0) ) {
+					cout << "veering right" << endl;
+		
+		    		if(left_speed > 0.16)
+		    			left_speed -= 0.008;
+		    		else if( right_speed < 0.25)
+		    			right_speed += 0.008;
+		    }
+		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
+	    	else if(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI < -3.0 ){
+	    		cout << "veering left" << endl;
+	    		if(left_speed < 0.25)
+	    			left_speed += 0.008;
+	    		else if(right_speed > 0.16)
+	    			right_speed -= 0.008;
+	    	}
+/*
+	    	if( y_current - y_origin > 0) {
+					cout << "positive y displacement" << endl;
+		
+		    		if(left_speed > 0.14)
+		    			left_speed += 0.002*(y_current-y_origin);
+		    		else if( right_speed < 0.18)
+		    			right_speed -= 0.002*(y_current-y_origin);
+		    }
+		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
+	    	else if(y_current - y_origin < 0){
+	    		cout << "negative y displacement" << endl;
+	    		if(left_speed < 0.18)
+	    			left_speed -= 0.002 *(abs(y_current-y_origin));
+	    		else if(right_speed > 0.14)
+	    			right_speed += 0.002 *(abs(y_current-y_origin));
+	    	}*/
+
+	    	msg_ptr->motor_left_speed = left_speed;
+	    	msg_ptr->motor_right_speed = right_speed;
+
+	    	//cout << ""
+
+	    	lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
+	    	usleep(50000);
+
+	    	pthread_mutex_lock(&comms_m);
+	    	x_current = read.x_rob;
+	    	y_current = read.y_rob;
+	    	theta_current = read.theta_rob;
+	    	pthread_mutex_unlock(&comms_m);
+
+	    }
+	    
+
+
+	    /*
+		for(int i = 0; i < 200; i++){
+			//maebot 4 full battery values
+			msg.motor_left_speed =  0.2;
+	    	msg.motor_right_speed = 0.193;
+	    	lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
+	    	usleep(50000);
+	    	cout << " hi " << endl;
+
+		}*/
+
+
+
+	}
+
 
 };
 
@@ -197,11 +312,12 @@ int main(int argc, char *argv[]){
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
+	C.go_straight();
 
-	while(true){
+	/*while(true){
 		C.turn_90();
 		usleep(5000000);
-	}
+	}*/
 
 	return 0;
 }
