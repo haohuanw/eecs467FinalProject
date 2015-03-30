@@ -204,8 +204,9 @@ struct Motion_Class{
 
 	    double left_speed =  0.2;
 	    double right_speed = 0.193;
-
-	    
+        const double max_wheelspeed = 0.3;
+        const double min_wheelspeed= 0.16;
+	    const double gain = 0.01;
 	    while(x_dest > x_current){
 
 	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
@@ -233,18 +234,18 @@ struct Motion_Class{
 			if( (180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI > 3.0) ) {
 					cout << "veering right" << endl;
 		
-		    		if(left_speed > 0.16)
-		    			left_speed -= 0.008;
-		    		else if( right_speed < 0.25)
-		    			right_speed += 0.008;
+		    		if(left_speed > min_wheelspeed)
+		    			left_speed -= gain;
+		    		else if( right_speed < max_wheelspeed)
+		    			right_speed += gain;
 		    }
 		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
 	    	else if(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI < -3.0 ){
 	    		cout << "veering left" << endl;
-	    		if(left_speed < 0.25)
-	    			left_speed += 0.008;
-	    		else if(right_speed > 0.16)
-	    			right_speed -= 0.008;
+	    		if(left_speed < max_wheelspeed)
+	    			left_speed += gain;
+	    		else if(right_speed > min_wheelspeed)
+	    			right_speed -= gain;
 	    	}
 /*
 	    	if( y_current - y_origin > 0) {

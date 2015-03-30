@@ -140,7 +140,7 @@ class state_t{
             }
             for(size_t y = 0; y < occupancy_grid.heightInCells();y++){
                 for(size_t x = 0; x < occupancy_grid.widthInCells(); x++){
-                    fscanf(fp,"%" SCNd8 " ",&temp);
+                    fscanf(fp,"%d ",&temp);
                     occupancy_grid.setLogOdds(x,y,temp);
                 }
             } 
