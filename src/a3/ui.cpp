@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <lcm/lcm-cpp.hpp>
 #include <vector>
+#include <deque>
 #include <iostream>
 #include <string>
 #include "math/point.hpp"
@@ -58,6 +59,7 @@ class state_t{
         eecs467::OccupancyGrid   occupancy_grid;
         image_processor         im_processor;
         calibration_t           calibration;
+        std::vector<int>        im_mask;
         pthread_mutex_t         mutex;
         pthread_mutex_t         data_mutex;
         pthread_t               animate_thread;
@@ -69,14 +71,18 @@ class state_t{
             vxapp.display_finished = display_finished;
             layers = zhash_create(sizeof(vx_display_t*), sizeof(vx_layer_t*), zhash_ptr_hash, zhash_ptr_equals);
             pg = pg_create();
-            pg_add_buttons(pg,"red","red maebot","publish","publish path",NULL);
+            pg_add_buttons(pg,"red","red maebot","publish","publish path","delete","delete latest path",NULL);
             my_listener = (parameter_listener_t*) calloc (1, sizeof(*my_listener));
             my_listener->impl = this;
             my_listener->param_changed = my_param_changed;
             pg_add_listener (pg, my_listener);
-            //need to change for multi-coord transformation purpose
-            calibration.read_tx_mat("../calibration/transform_elements.txt");
-
+            //read calibration files
+            /*calibration.read_image_to_world_mat("");
+              calibration.read_og_to_world_mat("");
+              calibration.read_world_to_og_mat("");
+              calibration.read_world_to_image_mat("");
+              calibration.read_mask("")
+              im_mask = calibration.get_mask()*/
             maebot_curr_selected = NONE;
             maebot_list.resize(NUM_MAEBOT);
 
@@ -108,10 +114,14 @@ class state_t{
             }
             else if (0==strcmp ("publish", name)){
                 if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
-                    state->maebot_list[state->maebot_curr_selected].waypoints.erase(
-                            state->maebot_list[state->maebot_curr_selected].waypoints.begin(),
-                            state->maebot_list[state->maebot_curr_selected].waypoints.begin()+1);
+                    state->maebot_list[state->maebot_curr_selected].waypoints.pop_front();
                     printf ("publish\n");
+                }
+            }
+            else if (0==strcmp ("delete", name)){
+                if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
+                    state->maebot_list[state->maebot_curr_selected].waypoints.pop_back();
+                    printf ("delete\n");
                 }
             }
             else{
@@ -230,6 +240,26 @@ static void* render_loop(void *data){
             fflush(stdout);
             isrc->release_frame(isrc,frmd);
         }
+        /*TODO
+         *add mask and blob detection
+         */
+        /*if(state->im_mask[0] != -1 && state->im_mask[1] != -1 && state->im_mask[2] != -1 && state->im_mask[3] != -1){
+            state->im_processor.image_masking(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3]);
+            for(int i=0;i<NUM_MAEBOT;++i){ 
+                int pos = state->im_processor.blob_detection(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3],state->maebot_list[i].hsv_range);
+                state->maebot_list[i].curr_pos.x = cali.trans(pos % im->width);
+                state->maebot_list[i].curr_pos.y = cali.trans(pos / im->width); 
+            }
+            for(int i=0;i<NUM_MAEBOT;++i){
+                trans curr_pos to im coord
+                trans curr_pos to og coord 
+                state->im_processor.draw_circle(im,state->maebot_list[i].curr_pos.x,state->maebot_list[i].curr_pos.y,10.0,state->maebot_list[i].disp_color);
+                int npoints = 1;
+                float points[3] = {og_coord}
+                vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
+                vx_buffer_add_back(og_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 2.0f)));
+            }
+        }*/  
         eecs467::Point<float> camera_click_point = state->camera_vx.get_click_point();
         if(camera_click_point.x != -1 && camera_click_point.y!= -1){
             /*TODO
@@ -237,6 +267,7 @@ static void* render_loop(void *data){
              */
             if(state->maebot_curr_selected != NONE){
                 //state->maebot_list[state->maebot_curr_selected].waypoints.push_back(/*point after trans*/);
+                //path planning
                 printf("Camera frame: added a way point at: %6.3f %6.3f\n",camera_click_point.x,camera_click_point.y);
                 state->maebot_list[state->maebot_curr_selected].waypoints.push_back(eecs467::Point<double>{(double)camera_click_point.x,(double)camera_click_point.y});
             }
@@ -248,11 +279,12 @@ static void* render_loop(void *data){
              */
             if(state->maebot_curr_selected != NONE){
                 //state->maebot_list[state->maebot_curr_selected].waypoints.push_back(/*point after trans*/);
+                //path planing
                 printf("Occupancy Grid frame: added a way point at: %6.3f %6.3f\n",og_click_point.x,og_click_point.y);
                 state->maebot_list[state->maebot_curr_selected].waypoints.push_back(eecs467::Point<double>{(double)og_click_point.x,(double)og_click_point.y});
             }
         }
-        
+
         vx_object_t *vt = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,"<<center,#000000,serif>>Current Maebot");
         vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-580,30),vxo_mat_scale(0.8),vt)));
 
@@ -272,12 +304,25 @@ static void* render_loop(void *data){
                 vx_object_t *vwy = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,y);
                 vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-490+(int)i*60,-30),vxo_mat_scale(0.8),vwy)));
             }
+            //display the way points
+            if(!state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
+                int npoints = state->maebot_list[state->maebot_curr_selected].waypoints.size();
+                float points[npoints*3];
+                for(uint i=0;i<state->maebot_list[state->maebot_curr_selected].waypoints.size();++i){
+                    points[i*3+0] = state->maebot_list[state->maebot_curr_selected].waypoints[i].x;
+                    points[i*3+1] = state->maebot_list[state->maebot_curr_selected].waypoints[i].y;
+                    points[i*3+2] = 2;
+                    //points[i*3+0] = world_to_im;
+                    //points[i*3+1] = world_to_im;
+                    //points[i*3+2] = 0;
+                }
+                vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
+                vx_buffer_add_back(cam_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 4.0f)));
+            }
+            /*TODO*/
+            //display the path
+            //same for og_buf
         }
-        /*TODO
-         * has way points? path planning to calculate the path
-         * cat them in one path
-         * and display it
-         */
         if(im != NULL){
             vx_object_t *vim = vxo_image_from_u32(im,
                     VXO_IMAGE_FLIPY,

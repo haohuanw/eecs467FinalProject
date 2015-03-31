@@ -30,7 +30,8 @@ BIN_UI = $(BIN_PATH)/ui
 BIN_NAVIGATOR_TEST = $(BIN_PATH)/navigator_test
 BIN_IMAGE_TO_WORLD_COORD = $(BIN_PATH)/image_to_world_coord
 BIN_BOT_DRIVER = $(BIN_PATH)/bot_driver
-ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_BOT_DRIVER) $(BIN_NAVIGATOR_TEST)
+BIN_MANUAL_GEN_TRANS = $(BIN_PATH)/manual_gen_trans
+ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_BOT_DRIVER) $(BIN_NAVIGATOR_TEST) $(BIN_MANUAL_GEN_TRANS)
 
 all: $(ALL)
 
@@ -53,6 +54,11 @@ $(BIN_BLOB_DETECTOR): blob_detector.o $(LIB_A3) $(LIBDEPS)
 $(BIN_IMAGE_TO_WORLD_COORD): image_to_world_coord.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
+
+$(BIN_MANUAL_GEN_TRANS): manual_gen_trans.o $(LIB_A3) $(LIBDEPS)
+	@echo "\t$@"
+	@$(CXX) -o $@ $^ $(LDFLAGS)
+
 
 $(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"

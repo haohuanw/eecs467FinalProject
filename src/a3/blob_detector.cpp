@@ -87,7 +87,7 @@ class state_t
             printf("coord: %f %f %f %f\n",corner_coords[0].x,corner_coords[1].x,corner_coords[0].y,corner_coords[1].y);
             red_hsv.read_hsv_from_file("../calibration/red_maebot_range.txt");
             green_hsv.read_hsv_from_file("../calibration/green_hsv_range.txt");
-	    cyan_hsv.read_hsv_from_file("../calibration/cyan_hsv_range.txt");
+            cyan_hsv.read_hsv_from_file("../calibration/cyan_hsv_range.txt");
         }
 
         ~state_t()
@@ -177,8 +177,8 @@ class state_t
                 vx_buffer_t *buf = vx_world_get_buffer(state->vxworld,"image");
                 image_u32_t *im; 
                 std::vector<int> red_center_list;
-		std::vector<int> green_center_list;
-		std::vector<int> cyan_center_list;
+                std::vector<int> green_center_list;
+                std::vector<int> cyan_center_list;
                 if(state->usePic){
                     im = image_u32_create_from_pnm(state->pic_url); 
                 }
@@ -195,41 +195,41 @@ class state_t
                     isrc->release_frame(isrc,frmd);
                 }
                 if(state->corner_coords[0].x != -1 && state->corner_coords[0].y != -1 && state->corner_coords[1].x != -1 && state->corner_coords[1].y != -1){  
-		            state->im_processor.image_masking(im,state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y);
+                    state->im_processor.image_masking(im,state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y);
                     red_center_list = state->im_processor.blob_detection(im,state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y,state->red_hsv);
-		            green_center_list = state->im_processor.blob_detection(im,state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y,state->green_hsv); 
-			    cyan_center_list = state->im_processor.blob_detection(im, state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y,state->cyan_hsv); 
-			    //printf("numCenters %d %d %d\n",red_center_list.size(),green_center_list.size(), cyan_center_list.size());
-		} 
-		if(!red_center_list.empty()){
-		    for(int i=0;i<red_center_list.size();++i){
-			    int y = (red_center_list[i])/im->width;
-			    int x = (red_center_list[i])%im->width;
-			    state->im_processor.draw_circle(im,x,y,10.0,0xff0000ff);
-		    }
-		}
-		if(!green_center_list.empty()){
-		    for(int i=0;i<green_center_list.size();++i){
-			int y = (green_center_list[i])/im->width;
-			int x = green_center_list[i]%im->width;
-			state->im_processor.draw_circle(im,x,y,10.0,0xff00ff00);
-		    }
-		}
-		if(!cyan_center_list.empty()){
-		  for(int i=0; i < cyan_center_list.size(); ++i){
-		    int y = (cyan_center_list[i]) / im->width;
-		    int x = cyan_center_list[i] % im->width;
-		    state->im_processor.draw_circle(im, x, y, 20.0, 0xffffff00);
-		  }
-		}
+                    green_center_list = state->im_processor.blob_detection(im,state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y,state->green_hsv); 
+                    cyan_center_list = state->im_processor.blob_detection(im, state->corner_coords[0].x,state->corner_coords[1].x,state->corner_coords[0].y,state->corner_coords[1].y,state->cyan_hsv); 
+                    //printf("numCenters %d %d %d\n",red_center_list.size(),green_center_list.size(), cyan_center_list.size());
+                } 
+                if(!red_center_list.empty()){
+                    for(int i=0;i<red_center_list.size();++i){
+                        int y = (red_center_list[i])/im->width;
+                        int x = (red_center_list[i])%im->width;
+                        state->im_processor.draw_circle(im,x,y,10.0,0xff0000ff);
+                    }
+                }
+                if(!green_center_list.empty()){
+                    for(int i=0;i<green_center_list.size();++i){
+                        int y = (green_center_list[i])/im->width;
+                        int x = green_center_list[i]%im->width;
+                        state->im_processor.draw_circle(im,x,y,10.0,0xff00ff00);
+                    }
+                }
+                if(!cyan_center_list.empty()){
+                    for(int i=0; i < cyan_center_list.size(); ++i){
+                        int y = (cyan_center_list[i]) / im->width;
+                        int x = cyan_center_list[i] % im->width;
+                        state->im_processor.draw_circle(im, x, y, 20.0, 0xffffff00);
+                    }
+                }
                 if(im != NULL){
                     vx_object_t *vim = vxo_image_from_u32(im,
                             VXO_IMAGE_FLIPY,
                             VX_TEX_MIN_FILTER | VX_TEX_MAG_FILTER);
                     //use pix coords to make a fix image
                     vx_buffer_add_back (buf,vxo_chain (
-                                    vxo_mat_translate3 (-im->width/2., -im->height/2., 0.),
-                                    vim));
+                                vxo_mat_translate3 (-im->width/2., -im->height/2., 0.),
+                                vim));
                     image_u32_destroy (im);
                 }
                 if(state->click_count == 2){
