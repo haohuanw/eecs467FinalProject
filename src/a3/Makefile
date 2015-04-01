@@ -62,7 +62,7 @@ $(BIN_MANUAL_GEN_TRANS): manual_gen_trans.o $(LIB_A3) $(LIBDEPS)
 
 $(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
-	@$(CXX) -o $@ $^ $(LDFLAGS)
+	@$(CXX) -g -o $@ $^ $(LDFLAGS)
 
 $(BIN_BOT_DRIVER): bot_driver.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"

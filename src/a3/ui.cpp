@@ -76,6 +76,7 @@ class state_t{
             my_listener->impl = this;
             my_listener->param_changed = my_param_changed;
             pg_add_listener (pg, my_listener);
+            /*TODO*/
             //read calibration files
             /*calibration.read_image_to_world_mat("");
               calibration.read_og_to_world_mat("");
@@ -244,22 +245,22 @@ static void* render_loop(void *data){
          *add mask and blob detection
          */
         /*if(state->im_mask[0] != -1 && state->im_mask[1] != -1 && state->im_mask[2] != -1 && state->im_mask[3] != -1){
-            state->im_processor.image_masking(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3]);
-            for(int i=0;i<NUM_MAEBOT;++i){ 
-                int pos = state->im_processor.blob_detection(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3],state->maebot_list[i].hsv_range);
-                state->maebot_list[i].curr_pos.x = cali.trans(pos % im->width);
-                state->maebot_list[i].curr_pos.y = cali.trans(pos / im->width); 
-            }
-            for(int i=0;i<NUM_MAEBOT;++i){
-                trans curr_pos to im coord
-                trans curr_pos to og coord 
-                state->im_processor.draw_circle(im,state->maebot_list[i].curr_pos.x,state->maebot_list[i].curr_pos.y,10.0,state->maebot_list[i].disp_color);
-                int npoints = 1;
-                float points[3] = {og_coord}
-                vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
-                vx_buffer_add_back(og_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 2.0f)));
-            }
-        }*/  
+          state->im_processor.image_masking(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3]);
+          for(int i=0;i<NUM_MAEBOT;++i){ 
+          int pos = state->im_processor.blob_detection(im,state->im_mask[0],state->im_mask[1],state->im_mask[2],state->im_mask[3],state->maebot_list[i].hsv_range);
+          state->maebot_list[i].curr_pos.x = cali.trans(pos % im->width);
+          state->maebot_list[i].curr_pos.y = cali.trans(pos / im->width); 
+          }
+          for(int i=0;i<NUM_MAEBOT;++i){
+          trans curr_pos to im coord
+          trans curr_pos to og coord 
+          state->im_processor.draw_circle(im,state->maebot_list[i].curr_pos.x,state->maebot_list[i].curr_pos.y,10.0,state->maebot_list[i].disp_color);
+          int npoints = 1;
+          float points[3] = {og_coord}
+          vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
+          vx_buffer_add_back(og_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 2.0f)));
+          }
+          }*/  
         eecs467::Point<float> camera_click_point = state->camera_vx.get_click_point();
         if(camera_click_point.x != -1 && camera_click_point.y!= -1){
             /*TODO
@@ -343,6 +344,17 @@ static void* render_loop(void *data){
 }
 
 int main(int argc, char ** argv){
+    g_type_init();
+    if (!g_thread_supported ())
+        g_thread_init (NULL);
+
+    // Initialize GTK
+    gdk_threads_init ();
+    gdk_threads_enter ();
+    gtk_init (&argc, &argv);
+
+    vx_global_init ();
+
     state_t state;
     printf("camera finding\n");
     zarray_t *urls = image_source_enumerate();
@@ -353,13 +365,14 @@ int main(int argc, char ** argv){
     printf("find camera\n");
     zarray_get(urls,0,&state.camera_url);
     printf("get camera address\n");
+
     draw(&state);
     pthread_create(&state.animate_thread,NULL,render_loop,&state);
 
-    gdk_threads_init();
-    gdk_threads_enter();
-    gtk_init(&argc, &argv);
-
+    //gdk_threads_init();
+    //gdk_threads_enter();
+    //gtk_init(&argc, &argv);
+    //g_type_init();
     vx_gtk_display_source_t *appwrap = vx_gtk_display_source_create(&state.camera_vx.vxapp);
     GtkWidget * window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     GtkWidget * canvas = vx_gtk_display_source_get_widget(appwrap);
@@ -385,11 +398,13 @@ int main(int argc, char ** argv){
     gtk_window_set_default_size (GTK_WINDOW (window3), 1280, 120);
     GtkWidget *vbox = gtk_vbox_new (0, 0);
     gtk_box_pack_start (GTK_BOX (vbox), canvas3, 1, 1, 0);
+    gtk_widget_show (canvas3);
     gtk_box_pack_start (GTK_BOX (vbox), pgui, 0, 0, 0);
+    gtk_widget_show (pgui);
     gtk_container_add (GTK_CONTAINER (window3), vbox);
     gtk_widget_show (window3);
-    gtk_widget_show (canvas3); // XXX Show all causes errors!
-    gtk_widget_show (pgui);
+    // XXX Show all causes errors!
+
     gtk_widget_show (vbox);
     g_signal_connect_swapped(G_OBJECT(window3), "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
