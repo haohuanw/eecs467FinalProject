@@ -198,72 +198,82 @@ struct Motion_Class{
 	    double y_current = y_origin;
 	    double theta_current = theta_origin;
 
-	    double x_dest = 1.0;
+	    double x_dest = 1.5;
 	    double y_dest = 0.0;
 	    double theta_dest = 0.0;
 
-	    double left_speed =  0.2;
-	    double right_speed = 0.193;
-        const double max_wheelspeed = 0.3;
-        const double min_wheelspeed= 0.16;
-	    const double gain = 0.01;
+	    double left_speed =  0.17;
+	    double right_speed = 0.163;
+
+	    const double MAX_SPEED = 0.18;
+	    const double MIN_SPEED = 0.16;
+	    const double MIN_GAIN = 0.0004;
+	    const double MAX_GAIN = 0.0008;
+
+	    
 	    while(x_dest > x_current){
 
 	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
+	    	cout <<"x_current: " << x_current << endl;
+	    	cout <<"y_current: " << y_current << endl;
 
 	    	//IF WE'RE ON THE LEFT SIDE OF THE LANE, CORRECT BY MOVING RIGHT
-	    	/*if( y_current - y_origin > 0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5 ){
+	    	if( y_current - y_origin > 0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5 ){
 	    		cout << "far left" << endl;
-	    		if(left_speed < 0.18)
-	    			left_speed += 0.0002;
-	    		else if(right_speed > 0.14)
-	    			right_speed -= 0.0002;
+	    		if(left_speed < MAX_SPEED)
+	    			left_speed += MIN_GAIN;
+	    		else if(right_speed > MIN_SPEED)
+	    			right_speed -= MIN_GAIN;
 		    	
 			}
 			//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
 			else if( y_current - y_origin < -0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5) {
 
 				cout << "far right" << endl;
-	    		if(left_speed > 0.14)
-		    		left_speed -= 0.0002;
-		    	else if( right_speed < 0.18)
-		    		right_speed += 0.0002;
+	    		if(left_speed > MIN_SPEED)
+		    		left_speed -= MIN_GAIN;
+		    	else if( right_speed < MAX_SPEED)
+		    		right_speed += MIN_GAIN;
 		    	
-			}*/
+			}
 			//IF WE'RE VEERING RIGHT, CORRECT BY GOING LEFT
-			if( (180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI > 3.0) ) {
+			if( (180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI < -5.0) ) {
 					cout << "veering right" << endl;
 		
-		    		if(left_speed > min_wheelspeed)
-		    			left_speed -= gain;
-		    		else if( right_speed < max_wheelspeed)
-		    			right_speed += gain;
+		    		if(left_speed > MIN_SPEED)
+		    			left_speed -=MAX_GAIN;
+		    		else if( right_speed < MAX_SPEED)
+		    			right_speed += MAX_GAIN;
 		    }
 		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
-	    	else if(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI < -3.0 ){
+	    	else if(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI > 5.0 ){
 	    		cout << "veering left" << endl;
-	    		if(left_speed < max_wheelspeed)
-	    			left_speed += gain;
-	    		else if(right_speed > min_wheelspeed)
-	    			right_speed -= gain;
+	    		if(left_speed < MAX_SPEED)
+	    			left_speed += MAX_GAIN;
+	    		else if(right_speed > MIN_SPEED)
+	    			right_speed -= MAX_GAIN;
 	    	}
-/*
-	    	if( y_current - y_origin > 0) {
-					cout << "positive y displacement" << endl;
-		
-		    		if(left_speed > 0.14)
-		    			left_speed += 0.002*(y_current-y_origin);
-		    		else if( right_speed < 0.18)
-		    			right_speed -= 0.002*(y_current-y_origin);
-		    }
-		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
-	    	else if(y_current - y_origin < 0){
-	    		cout << "negative y displacement" << endl;
-	    		if(left_speed < 0.18)
-	    			left_speed -= 0.002 *(abs(y_current-y_origin));
-	    		else if(right_speed > 0.14)
-	    			right_speed += 0.002 *(abs(y_current-y_origin));
-	    	}*/
+	    	else{
+
+	    		left_speed = 0.17;
+	    		right_speed = 0.163;
+
+		    	if( y_current - y_origin > 0.004 ){
+		    		cout << "straight left" << endl;
+		    			left_speed = 0.175;
+	    				right_speed = 0.165;
+			    	
+				}
+				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
+				else if( y_current - y_origin < -0.004 ) {
+
+					cout << "straight right" << endl;
+		    			left_speed = 0.165;
+	    				right_speed = 0.175;
+			    	
+				}
+	    	}
+
 
 	    	msg_ptr->motor_left_speed = left_speed;
 	    	msg_ptr->motor_right_speed = right_speed;
