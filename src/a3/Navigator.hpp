@@ -12,6 +12,7 @@
 #include <cassert>
 #include <utility>
 #include <cfloat>
+#include "math/point.hpp"
 
 struct vnode
 {
@@ -22,16 +23,10 @@ struct vnode
     std::vector<int> neighbors;
 };
 
-struct point
-{
-    double x;
-    double y;
-};
-
 struct line
 {
-    point start;
-    point end;
+    eecs467::Point<double> start;
+    eecs467::Point<double> end;
     double m;
 };
 
@@ -45,6 +40,15 @@ struct vnode_path
     int came_from;
 };
 
+class vnode_comp
+{
+    public:
+    bool operator()(vnode_path *a, vnode_path *b) const
+    {
+        return a->est_cost > b->est_cost;
+    }
+};
+
 class Navigator
 {
     private:
@@ -54,20 +58,20 @@ class Navigator
         double dist(vnode_path *a, vnode_path *b);
         double heuristic(vnode_path *a, vnode_path *b);
         void remove(vnode_path *node, std::vector<vnode_path*>& open_set_vector);
-        //void reconstructPath(vnode_path *end_node, std::vector<point>& path);
-        void reconstructPath(vnode_path *end_node, std::vector<point>& path, std::vector<vnode_path>& nodes);
-        void reverse(std::vector<point>& path);
-        std::pair<int, point> findClosestLine(point p);
-        point findClosestStart(point p);
-        std::pair<point, point> findClosestEnd(point p);
-        bool isSamePoint(point a, point b);
+        //void reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double>>& path);
+        void reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double> >& path, std::vector<vnode_path>& nodes);
+        void reverse(std::vector<eecs467::Point<double> >& path);
+        std::pair<int, eecs467::Point<double>> findClosestLine(eecs467::Point<double> p);
+        eecs467::Point<double> findClosestStart(eecs467::Point<double> p);
+        std::pair<eecs467::Point<double>, eecs467::Point<double>> findClosestEnd(eecs467::Point<double> p);
+        bool isSamePoint(eecs467::Point<double> a, eecs467::Point<double> b);
 
-        bool vnodeIsEqual(vnode& a, point& b);
+        bool vnodeIsEqual(vnode& a, eecs467::Point<double>& b);
         void printPath(std::vector<vnode_path>& nodes);
     public:
         Navigator(std::string filename);
         ~Navigator();
-        std::vector<point> pathPlan(point start, point end);
+        std::vector<eecs467::Point<double>> pathPlan(eecs467::Point<double> start, eecs467::Point<double> end);
         void printDiagram();
 };
 

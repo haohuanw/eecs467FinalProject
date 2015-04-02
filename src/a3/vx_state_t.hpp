@@ -8,7 +8,7 @@
 
 class vx_state_t{
     private:
-        eecs467::Point<float>   click_point;
+        eecs467::Point<double>   click_point;
     public:
         std::string             vxname;
         vx_application_t        vxapp;
@@ -22,7 +22,7 @@ class vx_state_t{
         vx_state_t();
         vx_state_t(std::string name);        
         ~vx_state_t();        
-        eecs467::Point<float> get_click_point();
+        eecs467::Point<double> get_click_point();
         static void display_finished(vx_application_t * app, vx_display_t * disp)
         {
             vx_state_t * state = (vx_state_t*)app->impl;

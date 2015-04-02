@@ -48,8 +48,8 @@ vx_state_t::~vx_state_t(){
     pthread_mutex_destroy(&mutex);
 }
 
-eecs467::Point<float> vx_state_t::get_click_point(){
-    eecs467::Point<float> tmp;
+eecs467::Point<double> vx_state_t::get_click_point(){
+    eecs467::Point<double> tmp;
     tmp.x = click_point.x;
     tmp.y = click_point.y;
     click_point.x = -1;
