@@ -129,6 +129,9 @@ static void* render_loop(void *data){
             }
             // draw maebot position on each window
             for(int i=0;i<NUM_MAEBOT;++i){
+                if(state->maebot_list[i].curr_pos.x == DBL_MAX || state->maebot_list[i].curr_pos.y == DBL_MAX){
+                    continue;
+                }   
                 eecs467::Point<double> curr_pos_im_coord = state->calibration.world_to_image_translate(state->maebot_list[i].curr_pos);
                 eecs467::Point<double> curr_pos_og_coord = state->calibration.world_to_og_translate(state->maebot_list[i].curr_pos);
                 //std::cout<<"curr_pos"<<state->maebot_list[i].curr_pos.x<<" "<<state->maebot_list[i].curr_pos.y<<std::endl;
@@ -138,7 +141,7 @@ static void* render_loop(void *data){
                 int npoints = 1;
                 float points[3] = {(float)curr_pos_og_coord.x, (float)curr_pos_og_coord.y, 2.0};
                 vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
-                vx_buffer_add_back(og_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 2.0f)));
+                vx_buffer_add_back(og_buf, vxo_points(verts, npoints, vxo_points_style(vx_red, 2.0f)));
             }
         }  
 
@@ -147,10 +150,21 @@ static void* render_loop(void *data){
         if(camera_click_point.x != -1 && camera_click_point.y!= -1){
             if(state->maebot_curr_selected != NONE){
                 eecs467::Point<double> click_world_coord = state->calibration.image_to_world_translate({camera_click_point.x,camera_click_point.y});
+                //if click out of boundary
+                if(click_world_coord.x<-0.875 || click_world_coord.x>0.875 || click_world_coord.y<-1.5   || click_world_coord.y>1.5){
+                    std::cout<<"click out of bound"<<std::endl;
+                }
+                //if click inside the obstacle
+                else if((click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<1 && click_world_coord.y>0.25) ||
+                   (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
+                    std::cout<<"click out of bound"<<std::endl;
+                }
                 //std::cout<<"click point at "<<camera_click_point.x<<" "<<camera_click_point.y<<std::endl;
                 //std::cout<<"translated at" << click_world_coord.x <<" "<<click_world_coord.y<<std::endl;
-                state->maebot_list[state->maebot_curr_selected].waypoints.push_back(click_world_coord);
-                printf("Camera frame: added a way point at: %6.3f %6.3f\n",click_world_coord.x, click_world_coord.y);
+                else{
+                    state->maebot_list[state->maebot_curr_selected].waypoints.push_back(click_world_coord);
+                    printf("Camera frame: added a way point at: %6.3f %6.3f\n",click_world_coord.x, click_world_coord.y);
+                }
             }
         }
 
@@ -159,8 +173,19 @@ static void* render_loop(void *data){
         if(og_click_point.x != -1 && og_click_point.y!= -1){
             if(state->maebot_curr_selected != NONE){
                 eecs467::Point<double> click_world_coord = state->calibration.og_to_world_translate({og_click_point.x,og_click_point.y});
-                state->maebot_list[state->maebot_curr_selected].waypoints.push_back(click_world_coord);
-                printf("Occupancy Grid frame: added a way point at: %6.3f %6.3f\n",click_world_coord.x,click_world_coord.y);
+                 //if click out of boundary
+                if(click_world_coord.x<-0.875 || click_world_coord.x>0.875 || click_world_coord.y<-1.5   || click_world_coord.y>1.5){
+                    std::cout<<"click out of bound"<<std::endl;
+                }
+                //if click inside the obstacle
+                else if((click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<1 && click_world_coord.y>0.25) ||
+                   (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
+                    std::cout<<"click out of bound"<<std::endl;
+                }
+                else{
+                    state->maebot_list[state->maebot_curr_selected].waypoints.push_back(click_world_coord);
+                    printf("Occupancy Grid frame: added a way point at: %6.3f %6.3f\n",click_world_coord.x,click_world_coord.y);
+                }
             }
         }
 
@@ -175,7 +200,11 @@ static void* render_loop(void *data){
                 vx_object_t *vm = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,"<<center,#ff0000,serif>>RED");
                 vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-580,-30),vxo_mat_scale(0.8),vm)));
             } 
-            for(uint i=0;i<state->maebot_list[state->maebot_curr_selected].waypoints.size();++i){
+            uint waypoints_size = state->maebot_list[state->maebot_curr_selected].waypoints.size();
+            if(waypoints_size > 19){
+                waypoints_size = 19;
+            }
+            for(uint i=0;i<waypoints_size;++i){
                 char x[31];
                 char y[31];
                 snprintf(x,31,"<<center,#000000,serif>>%f",state->maebot_list[state->maebot_curr_selected].waypoints[i].x);

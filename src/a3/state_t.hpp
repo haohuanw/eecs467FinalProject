@@ -72,7 +72,7 @@ class state_t{
             vxapp.display_finished = display_finished;
             layers = zhash_create(sizeof(vx_display_t*), sizeof(vx_layer_t*), zhash_ptr_hash, zhash_ptr_equals);
             pg = pg_create();
-            pg_add_buttons(pg,"red","red maebot","publish","publish path","delete","delete latest path",NULL);
+            pg_add_buttons(pg,"red maebot","select red maebot","deselect maebot","deselect maebot","confirm route","publish path","delete waypoint","delete latest path",NULL);
             my_listener = (parameter_listener_t*) calloc (1, sizeof(*my_listener));
             my_listener->impl = this;
             my_listener->param_changed = my_param_changed;
@@ -111,11 +111,15 @@ class state_t{
         {
             state_t *state = (state_t*) pl->impl;
             pthread_mutex_lock(&state->data_mutex);
-            if (0==strcmp ("red", name)){
+            if (0==strcmp ("red maebot", name)){
                 state->maebot_curr_selected = RED;
                 printf ("red\n");
             }
-            else if (0==strcmp ("publish", name)){
+            else if (0==strcmp ("deselect maebot",name)){
+                state->maebot_curr_selected = NONE;
+                printf("deselect maebot\n");
+            }
+            else if (0==strcmp ("confirm route", name)){
                 if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
                     state->maebot_list[state->maebot_curr_selected].curr_dest = state->maebot_list[state->maebot_curr_selected].waypoints.front();
                     state->maebot_list[state->maebot_curr_selected].waypoints.pop_front();
@@ -123,7 +127,7 @@ class state_t{
                     printf ("publish\n");
                 }
             }
-            else if (0==strcmp ("delete", name)){
+            else if (0==strcmp ("delete waypoint", name)){
                 if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
                     state->maebot_list[state->maebot_curr_selected].waypoints.pop_back();
                     printf ("delete\n");
