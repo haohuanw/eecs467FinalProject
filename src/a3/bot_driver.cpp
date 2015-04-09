@@ -202,10 +202,10 @@ struct Motion_Class{
 	    double y_dest = 0.0;
 	    double theta_dest = 0.0;
 
-	    double left_speed =  0.17;
-	    double right_speed = 0.163;
+	    double left_speed =  0.25;
+	    double right_speed = 0.25;
 
-	    const double MAX_SPEED = 0.18;
+	    const double MAX_SPEED = 0.3;
 	    const double MIN_SPEED = 0.16;
 	    const double MIN_GAIN = 0.0004;
 	    const double MAX_GAIN = 0.0008;
