@@ -33,7 +33,7 @@ void max_min_hsv::updateHSV(hsv_color_t new_HSV){
     }
 }
 
-void max_min_hsv::read_hsv_from_file(char *filename){
+void max_min_hsv::read_hsv_from_file(char const *filename){
     FILE *fp = fopen(filename,"r");
     if(fp == NULL){
         printf("Can't open file %s, ABORT.\n",filename);

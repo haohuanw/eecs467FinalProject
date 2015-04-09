@@ -1,2 +1,6 @@
-a2_mask:            mask_rect.txt
-a2_color_picker:    green_hsv_range.txt red_hsv_range.txt corner_hsv_range.txt
+mask:            mask_rect.txt
+color_picker:    red_maebot_hsv_range.txt
+transformations: im_to_world.txt
+		 og_to_world.txt
+		 world_to_og.txt
+		 world_to_im.txt

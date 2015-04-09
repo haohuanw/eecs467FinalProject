@@ -3,7 +3,7 @@
 
 using namespace std;
 
-void print(std::vector<point>& path)
+void print(std::vector<eecs467::Point<double>>& path)
 {
     for(uint i = 0; i < path.size(); i++)
     {
@@ -12,7 +12,7 @@ void print(std::vector<point>& path)
     std::cout << std::endl;
 }
 
-/*void printPoint(std::pair<int, point>& p)
+/*void printPoint(std::pair<int, eecs467::Point<double>>& p)
 {
     std::cout << "(" << p.first << ", " << p.second.x << ", " << p.second.y << ")\n";
 }*/
@@ -22,12 +22,12 @@ int main()
     Navigator n("../ground_truth/vmap.txt");
     n.printDiagram();
 
-    point a = {-0.75, 1.375};
-    point b = {-0.75, 0.3};
-    std::vector<point> path = n.pathPlan(a, b);
+    eecs467::Point<double> a = {0.55, -0.3};
+    eecs467::Point<double> b = {0.3, 1.1};
+    std::vector<eecs467::Point<double>> path = n.pathPlan(a, b);
     print(path);
 
-    b.y = 0.25;
+    /*b.y = 0.25;
     path = n.pathPlan(a, b);
     print(path);
 
@@ -36,10 +36,10 @@ int main()
     b.x = -0.6;
     b.y = -1.1;
     path = n.pathPlan(a, b);
-    print(path);
+    print(path);*/
 
     /*b.y = -0.125;
-    std::vector<point> path2 = n.pathPlan(a, b);
+    std::vector<eecs467::Point<double>> path2 = n.pathPlan(a, b);
     print(path2);
 
     b.x = 0.75;
@@ -69,7 +69,7 @@ int main()
 
     /*a.x = 0;
     a.y = 1.35;
-    std::pair<int, point> retval;
+    std::pair<int, eecs467::Point<double>> retval;
     retval = n.findClosestLine(a);
     printPoint(retval);
 

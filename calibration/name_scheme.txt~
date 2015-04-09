@@ -1,0 +1,2 @@
+a2_mask:            mask_rect.txt
+a2_color_picker:    green_hsv_range.txt red_hsv_range.txt corner_hsv_range.txt
