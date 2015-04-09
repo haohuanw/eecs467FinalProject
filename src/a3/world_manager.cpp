@@ -37,8 +37,7 @@ class state_t
         pthread_mutex_t localization_mutex;
 
         std::deque<eecs467::Point<double> > maebot_dests[NUM_MAEBOT];
-        std::deque<eecs467::Point<double> > maebot_paths[NUM_MAEBOT];
-
+        std::vector<eecs467::Point<double> > maebot_paths[NUM_MAEBOT];
     public:
         state_t()
         {
@@ -84,9 +83,17 @@ class state_t
             pthread_mutex_unlock(&localization_mutex);
         }
 
-        //void dest_list_handler(const lcm:ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg)
+        void dest_list_handler(const lcm:ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg){
+           /*TODO*/
+           //receive ui_dest_list
+           //add to the current maebot_dests[msg->color]
+           //could look at the structure of ui_dest_list in lcmtypes 
+        }
 };
-
+/*TODO*/
+//have a run thread to publish command to bot_driver and ui
+//for ui, publish to MAEBOT_DEST channel
+//with color,num_waypoints=1,x_poses=dest.x,y_pose=dest.y
 // This thread continuously publishes command messages to the maebot
 static void* send_cmds(void *data)
 {

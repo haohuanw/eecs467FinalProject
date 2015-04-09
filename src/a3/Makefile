@@ -30,7 +30,6 @@ BIN_UI = $(BIN_PATH)/ui
 BIN_NAVIGATOR_TEST = $(BIN_PATH)/navigator_test
 BIN_BOT_DRIVER = $(BIN_PATH)/bot_driver
 BIN_IMAGE_TO_WORLD_COORD = $(BIN_PATH)/image_to_world_coord
-BIN_BOT_DRIVER = $(BIN_PATH)/bot_driver
 BIN_MANUAL_GEN_TRANS = $(BIN_PATH)/manual_gen_trans
 ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_BOT_DRIVER) $(BIN_NAVIGATOR_TEST) $(BIN_MANUAL_GEN_TRANS)
 
@@ -70,10 +69,6 @@ $(BIN_BOT_DRIVER): bot_driver.o $(LIB_A3) $(LIBDEPS)
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(BIN_NAVIGATOR_TEST): navigatorTest.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
-	@echo "\t$@"
-	@$(CXX) -o $@ $^ $(LDFLAGS)
-
-$(BIN_BOT_DRIVER): bot_driver.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 

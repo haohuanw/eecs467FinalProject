@@ -156,7 +156,7 @@ static void* render_loop(void *data){
                 }
                 //if click inside the obstacle
                 else if((click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<1 && click_world_coord.y>0.25) ||
-                   (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
+                        (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
                     std::cout<<"click out of bound"<<std::endl;
                 }
                 //std::cout<<"click point at "<<camera_click_point.x<<" "<<camera_click_point.y<<std::endl;
@@ -173,13 +173,13 @@ static void* render_loop(void *data){
         if(og_click_point.x != -1 && og_click_point.y!= -1){
             if(state->maebot_curr_selected != NONE){
                 eecs467::Point<double> click_world_coord = state->calibration.og_to_world_translate({og_click_point.x,og_click_point.y});
-                 //if click out of boundary
+                //if click out of boundary
                 if(click_world_coord.x<-0.875 || click_world_coord.x>0.875 || click_world_coord.y<-1.5   || click_world_coord.y>1.5){
                     std::cout<<"click out of bound"<<std::endl;
                 }
                 //if click inside the obstacle
                 else if((click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<1 && click_world_coord.y>0.25) ||
-                   (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
+                        (click_world_coord.x>-0.375 && click_world_coord.x<0.375 && click_world_coord.y<-0.25 && click_world_coord.y>-1)){
                     std::cout<<"click out of bound"<<std::endl;
                 }
                 else{
@@ -323,6 +323,14 @@ static void* render_loop(void *data){
     return NULL;
 }
 
+static void* run_lcm(void *input){
+    state_t* state = (state_t*) input;
+    while(1){
+        state->lcm.handle();
+    }
+    return NULL;
+}
+
 int main(int argc, char ** argv){
     g_type_init();
     if (!g_thread_supported ())
@@ -348,11 +356,8 @@ int main(int argc, char ** argv){
 
     draw(&state);
     pthread_create(&state.animate_thread,NULL,render_loop,&state);
-
-    //gdk_threads_init();
-    //gdk_threads_enter();
-    //gtk_init(&argc, &argv);
-    //g_type_init();
+    pthread_create(&state.lcm_thread_pid,NULL,run_lcm,&state);
+    
     vx_gtk_display_source_t *appwrap = vx_gtk_display_source_create(&state.camera_vx.vxapp);
     GtkWidget * window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     GtkWidget * canvas = vx_gtk_display_source_get_widget(appwrap);

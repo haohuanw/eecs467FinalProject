@@ -1,0 +1,7 @@
+struct ui_dest_list_t
+{
+    int32_t color;//0 for red, 1 for blue, 2 for green, 3 for NONE
+    int32_t num_way_points;
+    double x_poses[num_way_points];
+    double y_poses[num_way_points]; 
+}

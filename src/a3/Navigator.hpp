@@ -59,7 +59,7 @@ class Navigator
         double heuristic(vnode_path *a, vnode_path *b);
         void remove(vnode_path *node, std::vector<vnode_path*>& open_set_vector);
         //void reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double>>& path);
-        void reconstructPath(vnode_path *end_node, std::deque<eecs467::Point<double> >& path, std::vector<vnode_path>& nodes);
+        void reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double> >& path, std::vector<vnode_path>& nodes);
         void reverse(std::vector<eecs467::Point<double> >& path);
         std::pair<int, eecs467::Point<double>> findClosestLine(eecs467::Point<double> p);
         eecs467::Point<double> findClosestStart(eecs467::Point<double> p);
@@ -71,7 +71,7 @@ class Navigator
     public:
         Navigator(std::string filename);
         ~Navigator();
-        std::deque<eecs467::Point<double>> pathPlan(eecs467::Point<double> start, eecs467::Point<double> end);
+        std::vector<eecs467::Point<double>> pathPlan(eecs467::Point<double> start, eecs467::Point<double> end);
         void printDiagram();
         void printOpenSet(std::priority_queue<vnode_path*, std::vector<vnode_path*>, vnode_comp> open_set);
 };

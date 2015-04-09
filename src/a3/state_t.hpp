@@ -40,9 +40,12 @@
 #include "calibration.hpp"
 #include "image_processor.hpp"
 #include "Navigator.hpp"
+#include "lcmtypes/ui_dest_list_t.hpp"
 
 class state_t{
     public:
+        lcm::LCM                lcm;
+        pthread_t               lcm_thread_pid;
         vx_state_t              camera_vx;
         vx_state_t              occupancy_grid_vx;
         vx_application_t        vxapp;
@@ -98,6 +101,7 @@ class state_t{
             read_map("../ground_truth/figure_eight.txt");
             pthread_mutex_init(&mutex,NULL);
             pthread_mutex_init(&data_mutex,NULL);
+            lcm.subscribe("MAEBOT_DEST",&state_t::maebot_dest_handler,this);
         }
 
         ~state_t(){
@@ -106,6 +110,23 @@ class state_t{
             pthread_mutex_destroy(&mutex);
             pthread_mutex_destroy(&data_mutex);
         }
+
+        void maebot_dest_handler(const lcm::ReceiveBuffer* rbuf,const std::string& channel,const ui_dest_list_t *msg){
+            if(msg->num_way_points != 1){
+                printf("Maebot Dest receive more than one dest, skip message\n");
+                return;
+            } 
+            if(msg->color == 3){
+                printf("Maebot color out of bound, skip message\n");
+                return;
+            }
+            pthread_mutex_lock(&data_mutex);
+            maebot_list[msg->color].curr_dest.x = msg->x_poses.front();
+            maebot_list[msg->color].curr_dest.y = msg->y_poses.front();
+            printf("Receive dest for Maebot %d with dest (%f,%f)\n",msg->color,msg->x_poses.front(),msg->y_poses.front());
+            pthread_mutex_unlock(&data_mutex);
+        }
+
         static void my_param_changed (parameter_listener_t *pl, parameter_gui_t *pg, const char *name)
         {
             state_t *state = (state_t*) pl->impl;
@@ -120,9 +141,18 @@ class state_t{
             }
             else if (0==strcmp ("confirm route", name)){
                 if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
-                    state->maebot_list[state->maebot_curr_selected].curr_dest = state->maebot_list[state->maebot_curr_selected].waypoints.front();
-                    state->maebot_list[state->maebot_curr_selected].waypoints.pop_front();
+                    //state->maebot_list[state->maebot_curr_selected].curr_dest = state->maebot_list[state->maebot_curr_selected].waypoints.front();
+                    //state->maebot_list[state->maebot_curr_selected].waypoints.pop_front();
                     // TODO: publish lcm message
+                    ui_dest_list_t list_from_ui;
+                    list_from_ui.color = state->maebot_curr_selected;
+                    list_from_ui.num_way_points = state->maebot_list[state->maebot_curr_selected].waypoints.size();
+                    for(int i=0;i<list_from_ui.num_way_points;++i){
+                        list_from_ui.x_poses.push_back(state->maebot_list[state->maebot_curr_selected].waypoints[i].x);
+                        list_from_ui.y_poses.push_back(state->maebot_list[state->maebot_curr_selected].waypoints[i].y);
+                    }
+                    state->maebot_list[state->maebot_curr_selected].waypoints.clear();
+                    state->lcm.publish("UI_DEST_LIST",&list_from_ui);
                     printf ("publish\n");
                 }
             }
@@ -137,6 +167,7 @@ class state_t{
             }
             pthread_mutex_unlock(&state->data_mutex);
         }
+
         void read_map(char const *addr){
             FILE *fp;
             uint t;

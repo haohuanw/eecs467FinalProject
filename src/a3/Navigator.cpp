@@ -33,7 +33,7 @@ Navigator::~Navigator()
 {
 }
 
-std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> real_start, eecs467::Point<double> end)
+std::vector<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> real_start, eecs467::Point<double> end)
 {
     vnode_path *start_node, *end_node;
     std::pair<eecs467::Point<double>, eecs467::Point<double>> end_pair = findClosestEnd(end);
@@ -63,7 +63,7 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
         vnode_path *current = open_set.top();
         if(current == end_node)
         {
-            std::deque<eecs467::Point<double>> path;
+            std::vector<eecs467::Point<double>> path;
             reconstructPath(current, path, nodes);
             path.push_back(end_pair.second);
             return path;
@@ -93,7 +93,7 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
             } // if
         } // for
     } // while
-    std::deque<eecs467::Point<double>> retval;
+    std::vector<eecs467::Point<double>> retval;
     return retval;
 }
 
@@ -192,7 +192,7 @@ void Navigator::remove(vnode_path *node, std::vector<vnode_path*>& open_set_vect
 }
 
 //void Navigator::reconstructPath(vnode_path *end_node, point end, std::vector<point>& path)
-void Navigator::reconstructPath(vnode_path *end_node, std::deque<eecs467::Point<double>>& path, std::vector<vnode_path>& nodes)
+void Navigator::reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double>>& path, std::vector<vnode_path>& nodes)
 {
     vnode_path *current = end_node;
     //std::cout << "end node: " << end_node->x << ", " << end_node->y << std::endl;
