@@ -3,7 +3,10 @@
 #include <deque>
 #include "math/point.hpp"
 #include "hsv.hpp"
-enum maebot_color {RED,BLUE,NONE};
+
+#define NUM_MAEBOT 1
+
+enum maebot_color {RED,BLUE,GREEN,NONE};
 
 struct maebot_gui_t{
     maebot_color color;

@@ -40,7 +40,6 @@
 #include "calibration.hpp"
 #include "image_processor.hpp"
 #include "Navigator.hpp"
-#define NUM_MAEBOT 1
 
 class state_t{
     public:
