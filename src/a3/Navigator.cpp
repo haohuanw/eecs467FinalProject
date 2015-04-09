@@ -59,6 +59,7 @@ std::vector<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> r
 
     while(!open_set.empty())
     {
+        printOpenSet(open_set);
         vnode_path *current = open_set.top();
         if(current == end_node)
         {
@@ -234,6 +235,18 @@ void Navigator::reverse(std::vector<eecs467::Point<double>>& path)
 bool Navigator::vnodeIsEqual(vnode& a, eecs467::Point<double>& b)
 {
     return a.x == b.x && a.y == b.y;
+}
+
+void Navigator::printOpenSet(std::priority_queue<vnode_path*, std::vector<vnode_path*>, vnode_comp> open_set)
+{
+    std::cout << "CURRENT OPEN SET: " << std::endl;
+    while(!open_set.empty())
+    {
+        vnode_path *next = open_set.top();
+        open_set.pop();
+        std::cout << "{x: " << next->x << ", y: " << next->y << ", index: " << next->index << ", cost: " << next->cost << ", est_cost: " << next->est_cost << "}\n";
+    }
+    std::cout << std::endl << "-----------------------------------------------------------------------------------------" << std::endl << std::endl;
 }
 
 void Navigator::printDiagram()

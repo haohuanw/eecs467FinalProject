@@ -22,12 +22,12 @@ int main()
     Navigator n("../ground_truth/vmap.txt");
     n.printDiagram();
 
-    eecs467::Point<double> a = {-0.75, 1.375};
-    eecs467::Point<double> b = {-0.75, 0.3};
+    eecs467::Point<double> a = {0.55, -0.3};
+    eecs467::Point<double> b = {0.3, 1.1};
     std::vector<eecs467::Point<double>> path = n.pathPlan(a, b);
     print(path);
 
-    b.y = 0.25;
+    /*b.y = 0.25;
     path = n.pathPlan(a, b);
     print(path);
 
@@ -36,7 +36,7 @@ int main()
     b.x = -0.6;
     b.y = -1.1;
     path = n.pathPlan(a, b);
-    print(path);
+    print(path);*/
 
     /*b.y = -0.125;
     std::vector<eecs467::Point<double>> path2 = n.pathPlan(a, b);

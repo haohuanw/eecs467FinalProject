@@ -73,6 +73,7 @@ class Navigator
         ~Navigator();
         std::vector<eecs467::Point<double>> pathPlan(eecs467::Point<double> start, eecs467::Point<double> end);
         void printDiagram();
+        void printOpenSet(std::priority_queue<vnode_path*, std::vector<vnode_path*>, vnode_comp> open_set);
 };
 
 #endif
