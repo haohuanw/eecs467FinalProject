@@ -10,6 +10,8 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <ctime>
+
 
 // common
 #include "common/getopt.h"
@@ -142,6 +144,7 @@ struct Motion_Class{
 	//2-average speed
 	//3- different in motors
 	void turn_90(){
+
 		pthread_mutex_lock(&comms_m);
 		double angle = read.theta_rob;
 		double angle_2 = read.theta_rob;
@@ -150,22 +153,45 @@ struct Motion_Class{
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
 
+	    double angle_diff = 0;
+
 		//run until the robot has turned 90 degrees
-		while( abs(180*(angle_2 - angle)/M_PI) <= 65){
+		while( true ){
 
 
 			pthread_mutex_lock(&comms_m);
-			cout << "angle delta: " <<  abs(180*eecs467::wrap_to_pi(angle_2 - angle)/M_PI) << endl;
+			cout << "angle diff: " <<  angle_diff << endl;
 			angle_2 = read.theta_rob;
 			pthread_mutex_unlock(&comms_m);
+			angle_diff = 180*eecs467::wrap_to_pi(angle_2 - angle)/M_PI;
+			//end = time(0);
 
-			msg.motor_left_speed =  -0.15;
-			msg.motor_right_speed = 0.16;
+			if(abs(angle_diff) < 90 ){
+				msg.motor_left_speed =  -0.18;
+				msg.motor_right_speed = 0.18;
+
+				usleep(5000);
+				lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
+				
+
+				/*angle_diff = abs(angle_2-angle);
+				if(angle_diff > 3*M_PI/4){
+					angle_diff = (M_PI-angle) + abs(-M_PI - angle_2);
+				}
+				angle_diff = 180*angle_diff/M_PI;*/
+			}
+			else{
+				msg.motor_left_speed =  0;
+				msg.motor_right_speed = 0;
 
 
-			lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
-			usleep(5000);
+				lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
+				usleep(2000);
 
+				break;
+			}
+
+			
 
 		}
 
@@ -182,43 +208,147 @@ struct Motion_Class{
 	    //return true;
 	}
 
-	void go_straight(){
+
+	//FUNCTION DETERMINES IF WE STILL HAVE SOMEWHERE TO GO
+	bool not_done(double theta_dest, double path_pos, double path_dest){
+
+		//if moving along positive x,y
+		if(theta_dest == 0 || theta_dest == M_PI/2.0){
+			if(path_pos < path_dest)
+				return true;
+		}
+		else{
+			//if moving along negative x,y
+			if(path_dest < path_pos)
+				return true;
+		}
+		return false;
+	}
+
+	//returns -1 if too far right, returns 1 if too far left, 0 if ok
+	int too_far(double theta_dest, double lane_pos, double lane_dest, double thresh){
+
+		if(theta_dest == 0 || theta_dest == M_PI/2.0){
+			if(lane_pos-lane_dest > thresh)
+				return 1;
+			else if(lane_pos-lane_dest < -thresh)
+				return -1;
+			else
+				return 0;
+		}
+		else{
+			if(lane_pos-lane_dest > thresh)
+				return -1;
+			else if(lane_pos-lane_dest < -thresh)
+				return 1;
+			else
+				return 0;
+		}
+
+		return 0;
+	}
+
+	void go_straight(double theta_dest, double x_dest, double y_dest, double theta_in, double x_in, double y_in){
 
 		uint64_t time;
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
 
-	    pthread_mutex_lock(&comms_m);
-	    double x_origin = read.x_rob;
-	    double y_origin = read.y_rob;
-	    double theta_origin = read.theta_rob;
-	    pthread_mutex_unlock(&comms_m);
+	    double theta_current = theta_in;
+	    double path_pos, lane_pos;
+	    double path_dest, lane_dest;
 
-	    double x_current = x_origin;
-	    double y_current = y_origin;
-	    double theta_current = theta_origin;
 
-	    double x_dest = 1.5;
-	    double y_dest = 0.0;
-	    double theta_dest = 0.0;
+	    double left_speed =  0.17;
+	    double right_speed = 0.163;
 
-	    double left_speed =  0.25;
-	    double right_speed = 0.25;
-
-	    const double MAX_SPEED = 0.3;
+	    const double MAX_SPEED = 0.19;
 	    const double MIN_SPEED = 0.16;
 	    const double MIN_GAIN = 0.0004;
 	    const double MAX_GAIN = 0.0008;
 
+
+	    pthread_mutex_lock(&comms_m);
+	   	read.x_rob = path_pos;
+	   	read.y_rob = lane_pos;
+		read.theta_rob = theta_current;	    
+		pthread_mutex_unlock(&comms_m);
+
+	    //REMEMBER: x in the robot's frame is the direction of motion, always!
+	    //HOWEVER: x in the world frame is static
+
+	    //ORIENT THE STARTING POSITION AND DESTINATION ACCORDINGLY
+
+	    //If moving along the positive x axis
+	    if(theta_dest == 0){
+	    	path_pos = x_in;
+	    	lane_pos = y_in;
+	    	path_dest = x_dest;
+	    	lane_dest = y_dest;
+
+	    }
+	    //if moving along the positive y axis
+	    else if(theta_dest == M_PI/2.0){
+	    	path_pos = y_in;
+	    	lane_pos = x_in;
+	    	path_dest = y_dest;
+	    	lane_dest = x_dest;
+
+	    }
+	    //if moving along the negative x axis
+	    else if(theta_dest == M_PI || theta_dest == -M_PI){
+	    	path_pos = x_in;
+	    	lane_pos = y_in;
+	    	path_dest = x_dest;
+	    	lane_dest = y_dest;
+
+	    }
+	    //if moving along the negative y axis
+	    else if(theta_dest == -M_PI/2.0){
+	    	path_pos = y_in;
+	    	lane_pos = x_in;
+	    	path_dest = y_dest;
+	    	lane_dest = x_dest;
+	    }
+	    else{}
+
+
 	    
-	    while(x_dest > x_current){
+
+	    //PID variables
+	    /*double prev_angle[3];
+	    double prev_dis[3];
+	    prev_angle[0]=0;
+	    prev_angle[1]=0;
+	    prev_angle[2]=0;
+
+	    prev_dis[0]=0;
+	    prev_dis[0]=0;
+	    prev_dis[0]=0;
+
+	    double prop_coeff;
+	    double diff_coeff;
+	    double int_coeff;
+
+	    double prop_y_error = 0;
+	    double prop_theta_error = 0;
+	    double diff_y_error = 0;
+	    double diff_theta_error = 0;
+	    double int_y_error = 0;
+	    double int_theta_error = 0;*/
+
+	    double angle_diff;
+
+	    while( not_done(theta_dest, path_pos, path_dest) ){
 
 	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
-	    	cout <<"x_current: " << x_current << endl;
-	    	cout <<"y_current: " << y_current << endl;
+	    	cout <<"path_position: " << path_pos << endl;
+	    	cout <<"lane_position: " << lane_pos << endl;
+	    	//BACKUP P controller works
+
 
 	    	//IF WE'RE ON THE LEFT SIDE OF THE LANE, CORRECT BY MOVING RIGHT
-	    	if( y_current - y_origin > 0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5 ){
+	    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 && abs(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI) < 5 ){
 	    		cout << "far left" << endl;
 	    		if(left_speed < MAX_SPEED)
 	    			left_speed += MIN_GAIN;
@@ -227,7 +357,7 @@ struct Motion_Class{
 		    	
 			}
 			//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
-			else if( y_current - y_origin < -0.04 && abs(180*eecs467::wrap_to_pi(theta_origin - theta_dest)/M_PI) < 5) {
+			else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 && abs(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI) < 5) {
 
 				cout << "far right" << endl;
 	    		if(left_speed > MIN_SPEED)
@@ -237,7 +367,7 @@ struct Motion_Class{
 		    	
 			}
 			//IF WE'RE VEERING RIGHT, CORRECT BY GOING LEFT
-			if( (180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI < -5.0) ) {
+			else if( (180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI < -5.0) ) {
 					cout << "veering right" << endl;
 		
 		    		if(left_speed > MIN_SPEED)
@@ -258,14 +388,14 @@ struct Motion_Class{
 	    		left_speed = 0.17;
 	    		right_speed = 0.163;
 
-		    	if( y_current - y_origin > 0.004 ){
+		    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 ){
 		    		cout << "straight left" << endl;
 		    			left_speed = 0.175;
 	    				right_speed = 0.165;
 			    	
 				}
 				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
-				else if( y_current - y_origin < -0.004 ) {
+				else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 ) {
 
 					cout << "straight right" << endl;
 		    			left_speed = 0.165;
@@ -273,8 +403,15 @@ struct Motion_Class{
 			    	
 				}
 	    	}
+			
+			/*
+	    	prop_y_error = y_current - y_dest;
+	    	prop_theta_error = theta_current - theta_dest;
 
+	    	int_y_error += prop_y_error;
+	    	int_theta_error += prop_theta_error;
 
+	*/
 	    	msg_ptr->motor_left_speed = left_speed;
 	    	msg_ptr->motor_right_speed = right_speed;
 
@@ -284,15 +421,13 @@ struct Motion_Class{
 	    	usleep(50000);
 
 	    	pthread_mutex_lock(&comms_m);
-	    	x_current = read.x_rob;
-	    	y_current = read.y_rob;
+	    	path_pos = read.x_rob;
+	    	lane_pos  = read.y_rob;
 	    	theta_current = read.theta_rob;
 	    	pthread_mutex_unlock(&comms_m);
 
 	    }
 	    
-
-
 	    /*
 		for(int i = 0; i < 200; i++){
 			//maebot 4 full battery values
@@ -304,10 +439,7 @@ struct Motion_Class{
 
 		}*/
 
-
-
-	}
-
+	    }
 
 };
 
@@ -323,7 +455,7 @@ int main(int argc, char *argv[]){
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
-	C.go_straight();
+	C.go_straight(0.0, 1.5, 0.0, 0.0, 0.0, 0.0);
 
 	/*while(true){
 		C.turn_90();
@@ -331,8 +463,4 @@ int main(int argc, char *argv[]){
 	}*/
 
 	return 0;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 74b3daa1d3084c6a844c1171a1174fae1e319ea1
