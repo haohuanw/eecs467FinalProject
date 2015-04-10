@@ -43,6 +43,8 @@
 #define NEG_30d (-M_PI/6.0)
 #define _USE_MATH_DEFINES
 
+
+// NEED TO PUBLISH POSE TO WORLD MANAGER
 static const char* MAP_TO_READ = "figure_eight.txt";
 
 class state_t
@@ -74,6 +76,7 @@ class state_t
         vx_gtk_display_source_t* appwrap;
         pthread_mutex_t mutex; // for accessing the arrays
         pthread_t animate_thread;
+
         image_u8_t *image_buf;
 
         int wall_expansion;
@@ -122,7 +125,6 @@ class state_t
 
             lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
             lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
-            lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
         }
 
         ~state_t()
@@ -140,6 +142,8 @@ class state_t
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
             pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+            pthread_create(&broadcast_thread, NULL, &state_t::broadcast_loop, this); 
+
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
@@ -187,6 +191,11 @@ class state_t
                     eecs467::Point<float> best_point;
                     best_point.x = best.x;
                     best_point.y = best.y;
+
+                    maebot_pose_t pose msg;
+                    pose_msg = best;
+
+                    state->lcm.publish("LOC_WM", &pose_msg);
                     
                     
                 } 
@@ -236,17 +245,7 @@ class state_t
                     else{
                         //printf("later scan\n");
                         particles.push_scan(*msg);
-                        /*matcher.push_laser(msg);
-                          matcher.process();
-                          curr_lasers = matcher.get_processed_laser();
-                          if(curr_lasers.empty()){
-                          pthread_mutex_unlock(&data_mutex);
-                          return;
-                          }*/
                     }
-                    /*map.update(curr_lasers);
-                      particles.has_map = true;
-                      particles.s_model.update_grid(&map.grid);*/
 
                 }
             } 
@@ -335,6 +334,10 @@ class state_t
             }
             fclose(fp);
         }
+
+
+
+
 
         static void* render_loop(void* data)
         {
@@ -449,6 +452,9 @@ class state_t
 
 
 };
+
+
+
 
 int main(int argc, char ** argv)
 {
