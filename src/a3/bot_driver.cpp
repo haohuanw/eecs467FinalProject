@@ -143,11 +143,13 @@ struct Motion_Class{
 	//1-angle cutoff
 	//2-average speed
 	//3- different in motors
-	void turn_90(){
+	void turn_X(double theta_current, double theta_dest){
+
+		double angle = theta_current;
+		double angle_2 = theta_dest;
 
 		pthread_mutex_lock(&comms_m);
-		double angle = read.theta_rob;
-		double angle_2 = read.theta_rob;
+		read.theta_rob = theta_current;
 		pthread_mutex_unlock(&comms_m);
 
 		maebot_motor_command_t msg;
@@ -161,12 +163,12 @@ struct Motion_Class{
 
 			pthread_mutex_lock(&comms_m);
 			cout << "angle diff: " <<  angle_diff << endl;
-			angle_2 = read.theta_rob;
+			angle = read.theta_rob;
 			pthread_mutex_unlock(&comms_m);
 			angle_diff = 180*eecs467::wrap_to_pi(angle_2 - angle)/M_PI;
 			//end = time(0);
 
-			if(abs(angle_diff) < 90 ){
+			if(abs(angle_diff) > 0.5 ){
 				msg.motor_left_speed =  -0.18;
 				msg.motor_right_speed = 0.18;
 
@@ -194,11 +196,9 @@ struct Motion_Class{
 			
 
 		}
-
-		pthread_mutex_lock(&comms_m);
+		
 		cout << "angle delta: " <<  abs(180*eecs467::wrap_to_pi(angle_2 - angle)/M_PI) << endl;
-		angle_2 = read.theta_rob;
-		pthread_mutex_unlock(&comms_m);
+		
 
 
 		msg.motor_left_speed =  0.0;
