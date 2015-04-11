@@ -8,6 +8,7 @@
 #include <vector>
 #include <deque>
 #include <iostream>
+#include <string>
 
 // core api
 #include "vx/vx.h"
@@ -44,8 +45,10 @@
 #define _USE_MATH_DEFINES
 
 
+
 // NEED TO PUBLISH POSE TO WORLD MANAGER
 static const char* MAP_TO_READ = "figure_eight.txt";
+std::string color;
 
 class state_t
 {
@@ -59,8 +62,6 @@ class state_t
         pthread_mutex_t run_mutex;
 
         particle_data particles;
-        //action_model action_error_model;
-        //pose_tracker bot_tracker;
 
         std::vector<maebot_pose_t> our_path;
         std::vector<maebot_pose_t> collins_path;
@@ -81,6 +82,7 @@ class state_t
 
         int wall_expansion;
         int finished_draw_count;
+
 
     public:
         state_t()
@@ -142,7 +144,6 @@ class state_t
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
             pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
-            pthread_create(&broadcast_thread, NULL, &state_t::broadcast_loop, this); 
 
         }
 
@@ -192,10 +193,13 @@ class state_t
                     best_point.x = best.x;
                     best_point.y = best.y;
 
-                    maebot_pose_t pose msg;
+                    maebot_pose_t pose_msg;
                     pose_msg = best;
 
-                    state->lcm.publish("LOC_WM", &pose_msg);
+                    std::string msg_str = "MAEBOT_LOCALIZATION_";
+                    msg_str.append(color);
+
+                    this->lcm.publish(msg_str, &pose_msg);
                     
                     
                 } 
@@ -465,6 +469,9 @@ int main(int argc, char ** argv)
     gdk_threads_init();
     gdk_threads_enter();
     gtk_init(&argc, &argv);
+
+    color = *(++argv);
+    //std::cout << "color :" << color << std::endl; 
 
     state.appwrap = vx_gtk_display_source_create(&state.app);
     GtkWidget * window = gtk_window_new (GTK_WINDOW_TOPLEVEL);

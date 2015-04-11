@@ -12,6 +12,6 @@ struct bot_commands_t
   double x_dest;
   double y_dest;
   double theta_dest;
-  
+
   
 }
