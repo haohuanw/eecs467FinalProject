@@ -26,6 +26,7 @@
 //#include "lcmtypes/bot_commands_t.hpp"
 #include "lcmtypes/maebot_motor_feedback_t.hpp"
 #include "lcmtypes/maebot_motor_command_t.hpp"
+#include "lcmtypes/bot_commands_t.hpp"
 #include "mapping/occupancy_grid_utils.hpp"
 #include "math/angle_functions.hpp"
 #include "math.h"
@@ -66,9 +67,12 @@ struct move_data{
   	double y_dest;
   	double theta_dest;
 
+  	bool turn;
+
   	move_data(){
   		speed = 0;
   		x_rob = y_rob = x_dest = y_dest = theta_rob = theta_dest = 0;
+  		turn = false;
 
   	}
 
@@ -89,19 +93,43 @@ struct Motion_Class{
 		first_read = true;
 	}
 
-	//LCM handler for reading in maebot commands from the master program
-	/*void bot_commands_handler(const lcm::ReceiveBuffer* rbuf, const string &channel, const bot_commands_t* msg){
+	bool do_something(){
+		bool ret;
 		pthread_mutex_lock(&comms_m);
-		read.speed = msg->speed;
+		ret = new_command;
+		comp = read;
+		pthread_mutex_unlock(&comms_m);
+		
+
+		return ret;
+	}
+
+	//LCM handler for reading in maebot commands from the master program
+	void bot_commands_handler(const lcm::ReceiveBuffer* rbuf, const string &channel, const bot_commands_t* msg){
+		pthread_mutex_lock(&comms_m);
 		read.x_rob = msg->x_rob;
 		read.y_rob = msg->y_rob;
 		read.theta_rob = msg->theta_rob;
 
 		read.x_dest = msg->x_dest;
 		read.y_dest = msg->y_dest;
-		read.theta_dest = msg->theta_dest;
+		// read.theta_dest = msg->theta_dest;
+		if(x_dest > x_rob){
+			read.theta_dest = 0;
+		}
+		else if(x_dest < x_rob){
+			read.theta_dest = -M_PI;
+		}
+		else if(y_dest > y_rob){
+			read.theta_dest = M_PI/2.0;
+		}
+		else{
+			read.theta_dest = -M_PI/2.0;
+		}
+
+		new_command = true;
 		pthread_mutex_unlock(&comms_m);
-	}*/
+	}
 
 	//LCM handler for reading in odometry data from the maebot itself to have some control
 	//between bot command messages
@@ -125,7 +153,8 @@ struct Motion_Class{
 			read.y_rob = sin(eecs467::wrap_to_pi(read.theta_rob + a))*ticks_avg + read.y_rob;
 			read.theta_rob = eecs467::wrap_to_pi(d_theta + read.theta_rob);
 
-			//cout << "theta: " << read.theta_rob << endl;
+			cout << "RED===: ";
+			cout << "x_rob: " << read.x_rob << " y_rob: " << read.y_rob << " theta_rob: " << read.theta_rob << endl;
 
 			
 		}
@@ -148,12 +177,23 @@ struct Motion_Class{
 		double angle = theta_current;
 		double angle_2 = theta_dest;
 
+		if(angle - angle2 > 0){
+				msg.motor_left_speed =  0.18;
+				msg.motor_right_speed = -0.18;
+		}
+		else{
+				msg.motor_left_speed =  -0.18;
+				msg.motor_right_speed = 0.18;
+		}
+
 		pthread_mutex_lock(&comms_m);
 		read.theta_rob = theta_current;
 		pthread_mutex_unlock(&comms_m);
 
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
+	    bot_commands_t bot_msg;
+	    bot_commands_t *bot_msg_ptr = &bot_msg; 
 
 	    double angle_diff = 0;
 
@@ -169,8 +209,6 @@ struct Motion_Class{
 			//end = time(0);
 
 			if(abs(angle_diff) > 0.5 ){
-				msg.motor_left_speed =  -0.18;
-				msg.motor_right_speed = 0.18;
 
 				usleep(5000);
 				lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
@@ -245,14 +283,19 @@ struct Motion_Class{
 				return 0;
 		}
 
+		bot_msg_ptr->reach_dest = true;
+	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
+
+
 		return 0;
 	}
 
 	void go_straight(double theta_dest, double x_dest, double y_dest, double theta_in, double x_in, double y_in){
 
-		uint64_t time;
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
+	    bot_commands_t bot_msg;
+	    bot_commands_t *bot_msg_ptr = &bot_msg; 
 
 	    double theta_current = theta_in;
 	    double path_pos, lane_pos;
@@ -311,31 +354,6 @@ struct Motion_Class{
 	    	lane_dest = x_dest;
 	    }
 	    else{}
-
-
-	    
-
-	    //PID variables
-	    /*double prev_angle[3];
-	    double prev_dis[3];
-	    prev_angle[0]=0;
-	    prev_angle[1]=0;
-	    prev_angle[2]=0;
-
-	    prev_dis[0]=0;
-	    prev_dis[0]=0;
-	    prev_dis[0]=0;
-
-	    double prop_coeff;
-	    double diff_coeff;
-	    double int_coeff;
-
-	    double prop_y_error = 0;
-	    double prop_theta_error = 0;
-	    double diff_y_error = 0;
-	    double diff_theta_error = 0;
-	    double int_y_error = 0;
-	    double int_theta_error = 0;*/
 
 	    double angle_diff;
 
@@ -403,19 +421,10 @@ struct Motion_Class{
 			    	
 				}
 	    	}
-			
-			/*
-	    	prop_y_error = y_current - y_dest;
-	    	prop_theta_error = theta_current - theta_dest;
 
-	    	int_y_error += prop_y_error;
-	    	int_theta_error += prop_theta_error;
-
-	*/
 	    	msg_ptr->motor_left_speed = left_speed;
 	    	msg_ptr->motor_right_speed = right_speed;
 
-	    	//cout << ""
 
 	    	lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
 	    	usleep(50000);
@@ -427,19 +436,14 @@ struct Motion_Class{
 	    	pthread_mutex_unlock(&comms_m);
 
 	    }
-	    
-	    /*
-		for(int i = 0; i < 200; i++){
-			//maebot 4 full battery values
-			msg.motor_left_speed =  0.2;
-	    	msg.motor_right_speed = 0.193;
-	    	lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
-	    	usleep(50000);
-	    	cout << " hi " << endl;
+	   
 
-		}*/
+	    //tell world manager we're done
+	    bot_msg_ptr->reach_dest = true;
+	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
 
-	    }
+
+	}
 
 };
 
@@ -455,12 +459,18 @@ int main(int argc, char *argv[]){
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
-	C.go_straight(0.0, 1.5, 0.0, 0.0, 0.0, 0.0);
+	//C.go_straight(0.0, 1.5, 0.0, 0.0, 0.0, 0.0);
 
-	/*while(true){
-		C.turn_90();
-		usleep(5000000);
-	}*/
+	while(true){
+		if(C.do_something()){
+			if(comp.turnning == true)
+				turn_X(comp.theta_rob, comp.theta_dest);
+			else{
+				go_straight(comp.theta_dest, comp.x_dest, comp.y_dest, comp.theta_rob, comp.x_rob, comp.y_rob);
+			}
+		}
+		
+	}
 
 	return 0;
 }

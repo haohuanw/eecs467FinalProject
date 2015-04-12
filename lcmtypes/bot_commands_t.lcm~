@@ -6,12 +6,12 @@ struct bot_commands_t
 	//robot coords
   double x_rob;
   double y_rob;
-  double theta_rob;
   
   //destination pose
   double x_dest;
   double y_dest;
-  double theta_dest;
-
   
+  //invariants 
+	bool turning;
+	bool reach_dest;
 }
