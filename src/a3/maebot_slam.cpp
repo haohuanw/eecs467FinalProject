@@ -202,7 +202,7 @@ class state_t
 
                     this->lcm.publish(msg_str, &pose_msg);
                     
-                    
+                    save_map(this);
                 } 
             }
         else{
@@ -216,6 +216,7 @@ class state_t
                     //maebot_laser_scan_t scan_msg = particles.get_scan();
                     curr_lasers = particles.s_model.get_processed_laser_scan(particles.get_scan(),best,best);
                     map.update(curr_lasers);
+                    
             last_draw = false;
           }
         }
@@ -244,7 +245,7 @@ class state_t
                         }
                         first_scan = false;
                         map.update(curr_lasers);
-                        save_map(this);
+                        
                         particles.s_model.update_grid(&map.grid);
                     }
                     else{
