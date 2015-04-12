@@ -458,7 +458,7 @@ int main(int argc, char *argv[]){
 
 	//init LCM
 	Motion_Class C;
-	//lcm_inst.subscribe("BOT_COMMANDS", &Motion_Class::bot_commands_handler, &C);
+	lcm_inst.subscribe("BOT_COMMANDS", &Motion_Class::bot_commands_handler, &C);
 	lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &Motion_Class::odometry_handler, &C);
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
