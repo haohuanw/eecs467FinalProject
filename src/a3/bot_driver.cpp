@@ -23,7 +23,6 @@
 
 //lcm
 #include "lcm/lcm-cpp.hpp"
-//#include "lcmtypes/bot_commands_t.hpp"
 #include "lcmtypes/maebot_motor_feedback_t.hpp"
 #include "lcmtypes/maebot_motor_command_t.hpp"
 #include "lcmtypes/bot_commands_t.hpp"
@@ -39,7 +38,6 @@ lcm::LCM lcm_inst;
 
 void *lcm_comm(void *input){
 	while(true){
-
 		lcm_inst.handle();
 	}
 	return NULL;
@@ -50,8 +48,6 @@ void *lcm_comm(void *input){
 struct odo_data{
 	int32_t left_ticks;
 	int32_t right_ticks;
-
-
 };
 
 
@@ -73,9 +69,7 @@ struct move_data{
   		speed = 0;
   		x_rob = y_rob = x_dest = y_dest = theta_rob = theta_dest = 0;
   		turn = false;
-
   	}
-
 };
 
 
@@ -86,7 +80,6 @@ struct Motion_Class{
 	odo_data o_read;
 	bool first_read;
 	bool new_odo, new_command;
-
 
 	Motion_Class(){
 		new_odo = false;
@@ -130,6 +123,7 @@ struct Motion_Class{
 		read.turn = msg->turning;
 
 		new_command = true;
+        cout<<"received a bot_commands from world manager"<<channel<<endl;
 		pthread_mutex_unlock(&comms_m);
 	}
 
@@ -155,8 +149,8 @@ struct Motion_Class{
 			read.y_rob = sin(eecs467::wrap_to_pi(read.theta_rob + a))*ticks_avg + read.y_rob;
 			read.theta_rob = eecs467::wrap_to_pi(d_theta + read.theta_rob);
 
-			cout << "RED===: ";
-			cout << "x_rob: " << read.x_rob << " y_rob: " << read.y_rob << " theta_rob: " << read.theta_rob << endl;
+			//cout << "RED===: ";
+			//cout << "x_rob: " << read.x_rob << " y_rob: " << read.y_rob << " theta_rob: " << read.theta_rob << endl;
 
 			
 		}

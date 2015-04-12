@@ -279,6 +279,7 @@ class state_t
                 for(size_t x = 0; x < map.grid.widthInCells(); x++){
                     fscanf(fp,"%d ",&temp);
                     map.grid.setLogOdds(x,y,temp);
+                    std::cout<<temp<<std::endl;
                 }
             }
             fclose(fp);

@@ -351,7 +351,7 @@ int main(int argc, char ** argv){
         exit(1);
     }
     printf("find camera\n");
-    zarray_get(urls,0,&state.camera_url);
+    zarray_get(urls,1,&state.camera_url);
     printf("get camera address\n");
 
     draw(&state);
