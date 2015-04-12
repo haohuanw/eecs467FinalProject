@@ -67,7 +67,7 @@ struct move_data{
   	double y_dest;
   	double theta_dest;
 
-  	bool turn;
+  	double turn;
 
   	move_data(){
   		speed = 0;
@@ -114,18 +114,20 @@ struct Motion_Class{
 		read.x_dest = msg->x_dest;
 		read.y_dest = msg->y_dest;
 		// read.theta_dest = msg->theta_dest;
-		if(x_dest > x_rob){
+		if(read.x_dest > read.x_rob){
 			read.theta_dest = 0;
 		}
-		else if(x_dest < x_rob){
+		else if(read.x_dest < read.x_rob){
 			read.theta_dest = -M_PI;
 		}
-		else if(y_dest > y_rob){
+		else if(read.y_dest > read.y_rob){
 			read.theta_dest = M_PI/2.0;
 		}
 		else{
 			read.theta_dest = -M_PI/2.0;
 		}
+
+		read.turn = msg->turning;
 
 		new_command = true;
 		pthread_mutex_unlock(&comms_m);
@@ -174,10 +176,15 @@ struct Motion_Class{
 	//3- different in motors
 	void turn_X(double theta_current, double theta_dest){
 
+		maebot_motor_command_t msg;
+	    maebot_motor_command_t *msg_ptr = &msg; 
+	    bot_commands_t bot_msg;
+	    bot_commands_t *bot_msg_ptr = &bot_msg; 
+
 		double angle = theta_current;
 		double angle_2 = theta_dest;
 
-		if(angle - angle2 > 0){
+		if(angle - angle_2 > 0){
 				msg.motor_left_speed =  0.18;
 				msg.motor_right_speed = -0.18;
 		}
@@ -190,10 +197,6 @@ struct Motion_Class{
 		read.theta_rob = theta_current;
 		pthread_mutex_unlock(&comms_m);
 
-		maebot_motor_command_t msg;
-	    maebot_motor_command_t *msg_ptr = &msg; 
-	    bot_commands_t bot_msg;
-	    bot_commands_t *bot_msg_ptr = &bot_msg; 
 
 	    double angle_diff = 0;
 
@@ -242,6 +245,10 @@ struct Motion_Class{
 		msg.motor_left_speed =  0.0;
 	    msg.motor_right_speed = 0.0;
 	    lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
+
+
+	    bot_msg_ptr->reach_dest = 1;
+	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
 	    //usleep(5000);
 	    //return true;
 	}
@@ -282,9 +289,6 @@ struct Motion_Class{
 			else
 				return 0;
 		}
-
-		bot_msg_ptr->reach_dest = true;
-	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
 
 
 		return 0;
@@ -439,7 +443,7 @@ struct Motion_Class{
 	   
 
 	    //tell world manager we're done
-	    bot_msg_ptr->reach_dest = true;
+	    bot_msg_ptr->reach_dest = 1;
 	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
 
 
@@ -463,10 +467,10 @@ int main(int argc, char *argv[]){
 
 	while(true){
 		if(C.do_something()){
-			if(comp.turnning == true)
-				turn_X(comp.theta_rob, comp.theta_dest);
+			if(C.comp.turn == 1)
+				C.turn_X(C.comp.theta_rob, C.comp.theta_dest);
 			else{
-				go_straight(comp.theta_dest, comp.x_dest, comp.y_dest, comp.theta_rob, comp.x_rob, comp.y_rob);
+				C.go_straight(C.comp.theta_dest, C.comp.x_dest, C.comp.y_dest, C.comp.theta_rob, C.comp.x_rob, C.comp.y_rob);
 			}
 		}
 		
