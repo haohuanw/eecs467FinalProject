@@ -59,7 +59,7 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
 
     while(!open_set.empty())
     {
-        printOpenSet(open_set);
+        //printOpenSet(open_set);
         vnode_path *current = open_set.top();
         if(current == end_node)
         {

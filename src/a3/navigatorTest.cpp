@@ -3,7 +3,7 @@
 
 using namespace std;
 
-void print(std::vector<eecs467::Point<double>>& path)
+void print(std::deque<eecs467::Point<double>>& path)
 {
     for(uint i = 0; i < path.size(); i++)
     {
@@ -24,7 +24,7 @@ int main()
 
     eecs467::Point<double> a = {0.55, -0.3};
     eecs467::Point<double> b = {0.3, 1.1};
-    std::vector<eecs467::Point<double>> path = n.pathPlan(a, b);
+    std::deque<eecs467::Point<double>> path = n.pathPlan(a, b);
     print(path);
 
     /*b.y = 0.25;

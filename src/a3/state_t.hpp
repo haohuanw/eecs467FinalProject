@@ -94,11 +94,11 @@ class state_t{
             m.color = RED;
             m.curr_pos = {DBL_MAX,DBL_MAX};
             m.curr_dest = {DBL_MAX,DBL_MAX};
-            m.hsv_range.read_hsv_from_file("../calibration/red_maebot_hsv_range.txt");
+            m.hsv_range.read_hsv_from_file("../calibration/blue_maebot_hsv_range.txt");
 
             maebot_list[RED] = m;
             occupancy_grid = eecs467::OccupancyGrid(5.0,5.0,0.05);
-            read_map("../ground_truth/figure_eight.txt");
+            read_map("../ground_truth/test_map.txt");
             pthread_mutex_init(&mutex,NULL);
             pthread_mutex_init(&data_mutex,NULL);
             lcm.subscribe("MAEBOT_DEST",&state_t::maebot_dest_handler,this);

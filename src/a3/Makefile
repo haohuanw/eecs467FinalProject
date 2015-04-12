@@ -80,7 +80,7 @@ $(BIN_MAEBOT_SLAM): maebot_slam.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
 
 $(BIN_WORLD_MANAGER): world_manager.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
 	@echo "\t$@"
-	@$(CXX) -o $@ $^ $(LDFLAGS)
+	@$(CXX) -g -o $@ $^ $(LDFLAGS)
 
 clean:
 	@rm -f *.o *~ *.a

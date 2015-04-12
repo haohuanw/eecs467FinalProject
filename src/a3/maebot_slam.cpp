@@ -202,8 +202,8 @@ class state_t
 
                     this->lcm.publish(msg_str, &pose_msg);
                     
-                    save_map(this);
                 } 
+                save_map(this);
             }
         else{
           if(last_draw){
@@ -467,7 +467,7 @@ int main(int argc, char ** argv)
     state_t state;
     state.init_thread();
     //comment below disable the vx
-    state.draw(&state,state.world);
+    /*state.draw(&state,state.world);
     gdk_threads_init();
     gdk_threads_enter();
     gtk_init(&argc, &argv);
@@ -486,7 +486,7 @@ int main(int argc, char ** argv)
     gtk_main(); // Blocks as long as GTK window is open
 
     gdk_threads_leave();
-    vx_gtk_display_source_destroy(state.appwrap);
+    vx_gtk_display_source_destroy(state.appwrap);*/
     //comment above disable vx
     pthread_join(state.animate_thread,NULL);
 
