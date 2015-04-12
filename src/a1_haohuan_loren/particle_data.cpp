@@ -58,9 +58,9 @@ void particle_data::update(){
     //printf("interpolated odo: %d %d\n",curr.encoder_left_ticks,curr.encoder_right_ticks);
     //printf("interpolated\n");
     bool isMove = true;
-    if(prev.encoder_left_ticks == curr.encoder_left_ticks && prev.encoder_right_ticks == curr.encoder_right_ticks){
+    /*if(prev.encoder_left_ticks == curr.encoder_left_ticks && prev.encoder_right_ticks == curr.encoder_right_ticks){
         isMove = false;
-    }
+    }*/
     if(isMove){
         a_model.init_model(prev,curr);
         //printf("model init\n");
