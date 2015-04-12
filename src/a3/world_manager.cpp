@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <math.h>
 #include <string>
+#include <deque>
 
 #include "common/getopt.h"
 #include "common/timestamp.h"
@@ -18,6 +19,9 @@
 #include "imagesource/image_convert.h"
 
 #include "lcmtypes/maebot_pose_t.hpp"
+#include "lcmtypes/ui_dest_list_t.hpp"
+#include "lcmtypes/bot_commands_t.hpp"
+#include "maebot_gui_t.hpp"
 #include "Navigator.hpp"
 
 
@@ -26,25 +30,43 @@
 
 class state_t
 {
-    private:
-        pthread_t manager_thread;
-        pthread_mutex_t manager_mutex;
+    public:
+        pthread_t run_thread_red;
+        pthread_t run_thread_blue;
+        pthread_t run_thread_green;
         int running;
         lcm::LCM lcm;
-        pthread_mutex_t lcm_mutex;
+        Navigator nav;
 
         maebot_pose_t maebot_locations[NUM_MAEBOT];
         pthread_mutex_t localization_mutex;
 
         std::deque<eecs467::Point<double> > maebot_dests[NUM_MAEBOT];
-        std::vector<eecs467::Point<double> > maebot_paths[NUM_MAEBOT];
+        pthread_mutex_t dests_mutexes[NUM_MAEBOT];
+        pthread_cond_t dests_cvs[NUM_MAEBOT];
+        
+        std::deque<eecs467::Point<double> > maebot_paths[NUM_MAEBOT];
+        bool reached_location[NUM_MAEBOT];
+        pthread_mutex_t paths_mutexes[NUM_MAEBOT];
+        pthread_cond_t paths_cvs[NUM_MAEBOT];
     public:
-        state_t()
+        state_t() : running(1), nav("../ground_truth/vmap.txt")
         {
             // initialize the things
-            running = 1;
-            pthread_mutex_init(&manager_mutex, NULL);
-            pthread_mutex_init(&localization_mutex);
+            for(int i = 0; i < NUM_MAEBOT; i++)
+            {
+                maebot_locations[i].x = 0;
+                maebot_locations[i].y = 0;
+                maebot_locations[i].theta = 0;
+                maebot_locations[i].utime = 0;
+                reached_location[i] = false;
+
+                pthread_mutex_init(&dests_mutexes[i], NULL);
+                pthread_cond_init(&dests_cvs[i], NULL);
+                pthread_mutex_init(&paths_mutexes[i], NULL);
+                pthread_cond_init(&paths_cvs[i], NULL);
+            }
+            pthread_mutex_init(&localization_mutex, NULL);
 
             // subscribe to lcm messages
             lcm.subscribe("UI_DEST_LIST", &state_t::dest_list_handler, this);
@@ -55,8 +77,14 @@ class state_t
 
         ~state_t()
         {
-            pthread_mutex_destroy(&manager_mutex);
             pthread_mutex_destroy(&localization_mutex);
+            for(int i = 0; i < NUM_MAEBOT; i++)
+            {
+                pthread_mutex_destroy(&dests_mutexes[i]);
+                pthread_mutex_destroy(&paths_mutexes[i]);
+                pthread_cond_destroy(&dests_cvs[i]);
+                pthread_cond_destroy(&paths_cvs[i]);
+            }
         }
 
         void maebot_localization_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const maebot_pose_t *msg)
@@ -78,172 +106,183 @@ class state_t
             {
                 // error
                 std::cout << "tried to get localization data from wrong channel: " << channel << std::endl;
-                exit(1);
             }
             pthread_mutex_unlock(&localization_mutex);
         }
 
-        void dest_list_handler(const lcm:ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg){
-           /*TODO*/
-           //receive ui_dest_list
-           //add to the current maebot_dests[msg->color]
-           //could look at the structure of ui_dest_list in lcmtypes 
+        void dest_list_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg){
+            if(msg->color == NONE)
+            {
+                return;
+            }
+            pthread_mutex_lock(&dests_mutexes[msg->color]);
+            for(int i = 0; i < msg->num_way_points; i++)
+            {
+                maebot_dests[msg->color].push_back(eecs467::Point<double>{msg->x_poses[i], msg->y_poses[i]});
+            }
+            pthread_mutex_unlock(&dests_mutexes[msg->color]);
+        }
+
+        void maebot_feedback_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const bot_commands_t *msg)
+        {
+            if(channel == "MAEBOT_PID_FEEDBACK_RED")
+            {
+                pthread_mutex_lock(&paths_mutexes[RED]);
+                reached_location[RED] = true;
+                pthread_cond_signal(&paths_cvs[RED]);
+                pthread_mutex_unlock(&paths_mutexes[RED]);
+            }
+            else if(channel == "MAEBOT_PID_FEEDBACK_BLUE")
+            {
+                pthread_mutex_lock(&paths_mutexes[BLUE]);
+                reached_location[BLUE] = true;
+                pthread_cond_signal(&paths_cvs[BLUE]);
+                pthread_mutex_unlock(&paths_mutexes[BLUE]);
+            }
+            else if(channel == "MAEBOT_PID_FEEDBACK_GREEN")
+            {
+                pthread_mutex_lock(&paths_mutexes[GREEN]);
+                reached_location[GREEN] = true;
+                pthread_cond_signal(&paths_cvs[GREEN]);
+                pthread_mutex_unlock(&paths_mutexes[GREEN]);
+            }
+            else
+            {
+                // error
+                std::cout << "skip feedback message channel: " << channel << std::endl;
+            }
+        }
+
+        void publish_to_maebot(maebot_color maebot, maebot_pose_t location, eecs467::Point<double> dest)
+        {
+            bot_commands_t cmd;
+            cmd.x_rob = location.x;
+            cmd.y_rob = location.y;
+            cmd.theta_rob = location.theta;
+            cmd.x_dest = dest.x;
+            cmd.y_dest = dest.y;
+            if(maebot == RED)
+            {
+                lcm.publish("MAEBOT_PID_COMMAND_RED", &cmd);
+            }
+            else if(maebot == BLUE)
+            {
+                lcm.publish("MAEBOT_PID_COMMAND_BLUE", &cmd);
+            }
+            else if(maebot == GREEN)
+            {
+                lcm.publish("MAEBOT_PID_COMMAND_GREEN", &cmd);
+            }
+            else
+            {
+                std::cout << "error: wrong maebot color passed in to publish_to_maebot function!!\n";
+                exit(1);
+            }
+        }
+
+        void publish_to_ui(maebot_color maebot)
+        {
+            ui_dest_list_t data;
+            data.num_way_points = 1;
+            data.color = (int) maebot;
+            data.x_poses.push_back(maebot_dests[maebot].front().x);
+            data.y_poses.push_back(maebot_dests[maebot].front().y);
+            lcm.publish("MAEBOT_DEST", &data);
+        }
+
+        bool within_error(maebot_color maebot)
+        {
+            return fabs(maebot_locations[maebot].x - maebot_paths[maebot].front().x) < 0.1 &&
+                   fabs(maebot_locations[maebot].y - maebot_paths[maebot].front().y) < 0.1;
         }
 };
-/*TODO*/
-//have a run thread to publish command to bot_driver and ui
-//for ui, publish to MAEBOT_DEST channel
-//with color,num_waypoints=1,x_poses=dest.x,y_pose=dest.y
-// This thread continuously publishes command messages to the maebot
-static void* send_cmds(void *data)
+
+
+state_t *state;
+static void* run_thread(void *data)
 {
-    state_t *state = (state_t *) data;
+    maebot_color *color = (maebot_color *) data;
     uint32_t Hz = 20;
 
-    while (state->running) {
-        pthread_mutex_lock(&state->cmd_mutex);
-        matd_t *click = matd_create_data(3, 1, state->last_click);
-        double mag = matd_vec_mag(click);
-        matd_t *n = click;
-        if (mag != 0) {
-            n = matd_vec_normalize(click);  // Leaks memory
+    while (state->running)
+    {
+        pthread_mutex_lock(&state->dests_mutexes[*color]);
+        while(state->maebot_dests[*color].empty())
+        {
+            pthread_cond_wait(&state->dests_cvs[*color], &state->dests_mutexes[*color]);
         }
-        double len = dmin(mag, state->joy_bounds);
+        pthread_mutex_unlock(&state->dests_mutexes[*color]);
 
-        // Map vector direction to motor command.
-        state->cmd.utime = utime_now();
-
-        int sign_x = matd_get(n, 0, 0) >= 0; // > 0 if positive
-        int sign_y = matd_get(n, 1, 0) >= 0; // > 0 if positive
-        float magx = fabs(matd_get(n, 0, 0));
-        float magy = fabs(matd_get(n, 1, 0));
-        float x2y = magx > 0 ? (magx-magy)/magx : 0.0f;
-        float y2x = magy > 0 ? (magy-magx)/magy : 0.0f;
-        float scale = 1.0f*len/state->joy_bounds;
-
-        // Quadrant check
-        if (sign_y && sign_x) {
-            // Quad I
-            state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale*y2x;
-            }
-        } else if (sign_y && !sign_x) {
-            // Quad II
-            state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale*y2x;
-            }
-        } else if (!sign_y && !sign_x) {
-            // Quad III
-            state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale*y2x;
-            }
-        } else {
-            // Quad IV
-            state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale*y2x;
-            }
+        // if no path (not calculated yet), create path
+        pthread_mutex_lock(&state->paths_mutexes[*color]);
+        if(state->maebot_paths[*color].empty())
+        {
+            pthread_mutex_lock(&state->localization_mutex);
+            pthread_mutex_lock(&state->dests_mutexes[*color]);
+            
+            state->maebot_paths[*color] = state->nav.pathPlan(eecs467::Point<double>{state->maebot_locations[*color].x,
+                                                              state->maebot_locations[*color].y},
+                                                              state->maebot_dests[*color].front());
+            state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
+            state->publish_to_ui(*color);
+            
+            pthread_mutex_unlock(&state->dests_mutexes[*color]);
+            pthread_mutex_unlock(&state->localization_mutex);
         }
+        pthread_mutex_unlock(&state->paths_mutexes[*color]);
 
-        if (mag != 0) {
-            matd_destroy(n);
+        // if path, check if reached next point in path
+
+        // wait until maebot thinks it has reached it's next point in the path
+        pthread_mutex_lock(&state->paths_mutexes[*color]);
+        while(!state->reached_location[*color])
+        {
+            pthread_cond_wait(&state->paths_cvs[*color], &state->paths_mutexes[*color]);
         }
-        matd_destroy(click);
+        pthread_mutex_unlock(&state->paths_mutexes[*color]);
 
-        // Publish
-        state->lcm->publish("MAEBOT_MOTOR_COMMAND", &(state->cmd));
-
-        pthread_mutex_unlock(&state->cmd_mutex);
+        // check if maebot actually reached location:
         
-        auto a = state->grid_mapper.getOccupancyGrid().toLCM();
-        state->lcm->publish("OCCUPANCY_GRID_GUI", &a);
+        pthread_mutex_lock(&state->paths_mutexes[*color]);
+        pthread_mutex_lock(&state->localization_mutex);
+        if(!state->within_error(*color))
+        {
+            state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
+        }
+        else
+        {
+            state->maebot_paths[*color].pop_front();
+            if(state->maebot_paths[*color].empty())
+            {
+                pthread_mutex_lock(&state->dests_mutexes[*color]);
+                state->maebot_dests[*color].pop_front();
+                pthread_mutex_unlock(&state->dests_mutexes[*color]);
+                pthread_mutex_unlock(&state->localization_mutex);
+                pthread_mutex_unlock(&state->paths_mutexes[*color]);
+                continue;
+            }
+            state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
+        }
+        pthread_mutex_unlock(&state->localization_mutex);
+        pthread_mutex_unlock(&state->paths_mutexes[*color]);
 
         usleep(1000000/Hz);
     }
 
     return NULL;
 }
-
-static void* update_map(void *data)
-{
-    state_t *state = (state_t*) data;
-
-    while(state->running)
-    {
-        state->grid_mapper.lockMapperMutex();
-        while(state->grid_mapper.laserScansEmpty() || state->grid_mapper.posesEmpty())
-        {
-            state->grid_mapper.wait();
-        }
-        state->grid_mapper.unlockMapperMutex();
-        std::cout << "received message" << std::endl;
-
-        LaserScan updated_scan = state->grid_mapper.calculateLaserOrigins();
-        if(!updated_scan.valid) { continue; }
-        state->grid_mapper.updateGrid(updated_scan);
-        state->grid_mapper.publishOccupancyGrid(updated_scan.end_pose);
-    }
-    return NULL;
-}
-
 int main(int argc, char **argv)
 {
     // === State initialization ============================
-    state_t *state = new state_t;
-
-    // === End =============================================
-
-    // Clean up on Ctrl+C
-    //signal(SIGINT, handler);
-
-    getopt_add_bool(state->gopt, 'h', "help", 0, "Show this help");
-    getopt_add_bool(state->gopt, 'v', "verbose", 0, "Show extra debugging info");
-    getopt_add_int(state->gopt, 'l', "limitKBs", "-1", "Remote display bandwith limit in KBs. < 0: unlimited.");
-    getopt_add_int(state->gopt, 'p', "port", "15151", "Vx display port");
-
-    if (!getopt_parse(state->gopt, argc, argv, 0) ||
-        getopt_get_bool(state->gopt, "help"))
-    {
-        getopt_do_usage(state->gopt);
-        exit(-1);
-    }
-
-    // Set up display
-    verbose = getopt_get_bool(state->gopt, "verbose");
-
-    // LCM subscriptions
-    MaebotPoseHandler pose_handler(&state->grid_mapper);
-    MaebotLaserScanHandler laser_scan_handler(&state->grid_mapper);
-
-    state->lcm->subscribe("MAEBOT_POSE",
-                          &MaebotPoseHandler::handleMessage,
-                          &pose_handler);
-    state->lcm->subscribe("MAEBOT_LASER_SCAN",
-                          &MaebotLaserScanHandler::handleMessage,
-                          &laser_scan_handler);
-    std::cout << "listening" << std::endl;
+    state = new state_t;
 
     // Spin up thread(s)
-    pthread_create(&state->cmd_thread, NULL, send_cmds, (void*)state);
-//    pthread_create(&state->lcm_thread, NULL, receive_lcm, (void*)state);
-    pthread_create(&state->update_map_thread, NULL, update_map, state);
+    pthread_create(&state->run_thread_red, NULL, run_thread, (void*)new maebot_color(RED));
+    pthread_create(&state->run_thread_blue, NULL, run_thread, (void*)new maebot_color(BLUE));
+    pthread_create(&state->run_thread_green, NULL, run_thread, (void*)new maebot_color(GREEN));
 
     // Loop forever
-    while(state->lcm->handle() == 0);
-
-//    pthread_join (state->lcm_thread, NULL);
-//    pthread_join (state->cmd_thread, NULL);
+    while(state->lcm.handle() == 0);
 
     return 0;
 }

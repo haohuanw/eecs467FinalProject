@@ -264,10 +264,10 @@ static void* render_loop(void *data){
                 maebot_path.push_back(path_start_im.x);
                 maebot_path.push_back(path_start_im.y);
                 maebot_path.push_back(2.0f);
-                for(std::vector<eecs467::Point<double>>::iterator it = state->maebot_list[state->maebot_curr_selected].path.begin(); it != state->maebot_list[state->maebot_curr_selected].path.end()-1; it++)
+                for(int i = 0; i < state->maebot_list[state->maebot_curr_selected].path.size()-1; i++)
                 {
-                    eecs467::Point<double> next_im = state->calibration.world_to_image_translate(*it);
-                    eecs467::Point<double> next_im_next = state->calibration.world_to_image_translate(*(it+1));
+                    eecs467::Point<double> next_im = state->calibration.world_to_image_translate(state->maebot_list[state->maebot_curr_selected].path[i]);
+                    eecs467::Point<double> next_im_next = state->calibration.world_to_image_translate(state->maebot_list[state->maebot_curr_selected].path[i+1]);
                     maebot_path.push_back((float)next_im.x);
                     maebot_path.push_back((float)next_im.y);
                     maebot_path.push_back(2.0f);
@@ -288,10 +288,10 @@ static void* render_loop(void *data){
                 maebot_path.push_back(path_start_og.x);
                 maebot_path.push_back(path_start_og.y);
                 maebot_path.push_back(2.0f);
-                for(std::vector<eecs467::Point<double>>::iterator it = state->maebot_list[state->maebot_curr_selected].path.begin(); it != state->maebot_list[state->maebot_curr_selected].path.end()-1; it++)
+                for(int i = 0; i < state->maebot_list[state->maebot_curr_selected].path.size()-1; i++)
                 {
-                    eecs467::Point<double> next_og = state->calibration.world_to_og_translate(*it);
-                    eecs467::Point<double> next_og_next = state->calibration.world_to_og_translate(*(it+1));
+                    eecs467::Point<double> next_og = state->calibration.world_to_og_translate(state->maebot_list[state->maebot_curr_selected].path[i]);
+                    eecs467::Point<double> next_og_next = state->calibration.world_to_og_translate(state->maebot_list[state->maebot_curr_selected].path[i+1]);
                     maebot_path.push_back((float)next_og.x);
                     maebot_path.push_back((float)next_og.y);
                     maebot_path.push_back(2.0f);
