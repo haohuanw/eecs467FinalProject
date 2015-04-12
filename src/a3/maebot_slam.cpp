@@ -8,7 +8,6 @@
 #include <vector>
 #include <deque>
 #include <iostream>
-#include <string>
 
 // core api
 #include "vx/vx.h"
@@ -21,33 +20,22 @@
 
 #include "common/getopt.h"
 #include "common/timestamp.h"
+#include "common/timestamp.h"
 #include "imagesource/image_u32.h"
 #include "imagesource/image_util.h"
 #include "lcmtypes/maebot_motor_feedback_t.hpp"
 #include "lcmtypes/maebot_sensor_data_t.hpp"
-#include "lcmtypes/maebot_motor_command_t.hpp"
 #include "particle_data.hpp"
 #include "action_model.hpp"
 #include "pose_tracker.hpp"
+
 #include "mapping/occupancy_grid.hpp"
 #include "mapping/occupancy_grid_utils.hpp"
 #include <math/point.hpp>
 #include "occupancy_map.hpp"
 #include <math/gsl_util_rand.h>
-#include <math/angle_functions.hpp>
 
-#define L_DRIVE_CMD 0.24
-#define R_DRIVE_CMD 0.24
-#define NEG_90d (-M_PI/2.0)
-#define POS_90d (M_PI/2.0)
-#define POS_30d (M_PI/6.0)
-#define NEG_30d (-M_PI/6.0)
-#define _USE_MATH_DEFINES
-
-
-
-// NEED TO PUBLISH POSE TO WORLD MANAGER
-static const char* MAP_TO_READ = "figure_eight.txt";
+static const char* MAP_TO_READ;
 std::string color;
 
 class state_t
@@ -62,14 +50,14 @@ class state_t
         pthread_mutex_t run_mutex;
 
         particle_data particles;
+        //action_model action_error_model;
+        //pose_tracker bot_tracker;
 
         std::vector<maebot_pose_t> our_path;
         std::vector<maebot_pose_t> collins_path;
-        std::vector<maebot_laser> curr_lasers;
-        std::vector<eecs467::Point<int>> frontier_path;
-        bool first_scan;
-        bool map_finished;
-        bool last_draw;  
+        maebot_pose_t curr_collin_pose;
+        //std::deque<maebot_laser> curr_lasers;
+        //bool first_scan;
         // vx stuff 
         vx_application_t app;
         vx_world_t * world;
@@ -77,11 +65,10 @@ class state_t
         vx_gtk_display_source_t* appwrap;
         pthread_mutex_t mutex; // for accessing the arrays
         pthread_t animate_thread;
-
         image_u8_t *image_buf;
-
-        int wall_expansion;
-        int finished_draw_count;
+        FILE *pose_fp;
+        FILE *odo_fp;
+        FILE *error_fp;
 
 
     public:
@@ -94,12 +81,10 @@ class state_t
             temp.theta=0;
 
             //read_map();
-            //particles.has_map = true;
             map = occupancy_map(5.0,5.0,0.05,1.0);
-            particles = particle_data(1500, temp, &map.grid);
-            first_scan = true;
-            map_finished = false;
-            last_draw = true;
+            particles = particle_data(1000, temp, &map.grid);
+            read_map();
+            //first_scan = true;
             //GUI init stuff
             layers = zhash_create(sizeof(vx_display_t*),sizeof(vx_layer_t*), zhash_ptr_hash, zhash_ptr_equals);
             app.impl= this;
@@ -110,9 +95,6 @@ class state_t
             gslu_rand_seed(); 
             //action_error_model = action_model();
             //bot_tracker = pose_tracker();
-
-            wall_expansion = 4;
-            finished_draw_count = 20;
 
             if (pthread_mutex_init(&run_mutex, NULL)) {
                 printf("run mutex init failed\n");
@@ -128,6 +110,10 @@ class state_t
             lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
             lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
             lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+            pose_fp = fopen("pose_data.txt","w");
+            odo_fp = fopen("odo_data.txt","w");
+            error_fp = fopen("error_data.txt","w");
+
         }
 
         ~state_t()
@@ -145,14 +131,14 @@ class state_t
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
             pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
-
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
             pthread_mutex_lock(&data_mutex);
 
             collins_path.push_back(*msg);
-
+            curr_collin_pose = *msg;
+            fprintf(pose_fp,"%lld %f %f\n",msg->utime,msg->x,msg->y);
             pthread_mutex_unlock(&data_mutex);
         }
 
@@ -162,98 +148,56 @@ class state_t
             pthread_mutex_lock(&data_mutex);
             //printf("start pushing\n");
             //bot_tracker.push_msg(*msg, action_error_model);
-            if(!map_finished){
-                particles.push_odo(*msg);
-            }
+            particles.push_odo(*msg);
             pthread_mutex_unlock(&data_mutex);
 
             pthread_mutex_lock(&data_mutex);
-            
-            if (map_finished && !last_draw && finished_draw_count > 0)
-            {
-                    maebot_pose_t best = particles.get_best();
-                    curr_lasers = particles.s_model.get_processed_laser_scan(particles.get_scan(),best,best);
-                    map.update(curr_lasers);
-                    particles.s_model.update_grid(&map.grid);
-                    finished_draw_count--;
-            }            
+            if(particles.ready()){
+                //printf("particle filter process\n");
+                particles.update();
+                //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
+                maebot_pose_t best = particles.get_best();
+                our_path.push_back(best);
 
-
-            if(!map_finished){
-                if(particles.ready()){
-                    //printf("particle filter process\n");
-                    maebot_pose_t old_best = particles.get_best();
-                    particles.update();
-                    maebot_pose_t best = particles.get_best();
-                    our_path.push_back(best);
-                    curr_lasers = particles.s_model.get_processed_laser_scan(particles.get_scan(),old_best,best);
-                    map.update(curr_lasers);
-                    particles.s_model.update_grid(&map.grid);
-
-                    eecs467::Point<float> best_point;
-                    best_point.x = best.x;
-                    best_point.y = best.y;
-
-                    maebot_pose_t pose_msg;
+                 maebot_pose_t pose_msg;
                     pose_msg = best;
 
                     std::string msg_str = "MAEBOT_LOCALIZATION_";
                     msg_str.append(color);
 
                     this->lcm.publish(msg_str, &pose_msg);
-                    
-                } 
-                save_map(this);
-            }
-        else{
-          if(last_draw){
-                    printf("DONE\n");
-                    //printf("particle filter process\n");
-                    //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
-                    maebot_pose_t best = particles.get_best();
-                    //our_path.push_back(best);
-//printf("position: %f, %f\n", best.x, best.y);
-                    //maebot_laser_scan_t scan_msg = particles.get_scan();
-                    curr_lasers = particles.s_model.get_processed_laser_scan(particles.get_scan(),best,best);
-                    map.update(curr_lasers);
-                    
-            last_draw = false;
-          }
-        }
+
+                float coeff = 0;
+                if(best.y > curr_collin_pose.y){
+                    coeff = 1;
+                }
+                else{
+                    coeff = -1;
+                }
+                float dy = best.y - curr_collin_pose.y;
+                float dx = best.x - curr_collin_pose.x;
+                float error = coeff*sqrt(dx*dx+dy*dy);
+                fprintf(odo_fp,"%lld %f %f\n",best.utime,best.x,best.y);
+                fprintf(error_fp,"%lld %f\n",best.utime,error);
+                //matcher.push_pose(&best);
+            } 
             pthread_mutex_unlock(&data_mutex);
         }
-
-
 
         void laser_scan_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_laser_scan_t *msg)
         {
             pthread_mutex_lock(&data_mutex);
             //printf("laser handle\n");
-            if(!map_finished){
-                if(particles.processing == false){
-                    if(first_scan){
-                        //printf("first scan");
-                        for(int i=0;i<msg->num_ranges;++i){
-                            maebot_laser l = maebot_laser(msg->times[i],
-                                    msg->ranges[i],
-                                    -1.0*msg->thetas[i],
-                                    msg->intensities[i],
-                                    0,
-                                    0);
-                            //printf("%f %f\n",msg->ranges[i],msg->thetas[i]);
-                            curr_lasers.push_back(l);
-                        }
-                        first_scan = false;
-                        map.update(curr_lasers);
-                        
-                        particles.s_model.update_grid(&map.grid);
-                    }
-                    else{
-                        //printf("later scan\n");
-                        particles.push_scan(*msg);
-                    }
-
-                }
+            if(particles.processing == false){
+                particles.push_scan(*msg);
+                //matcher.push_laser(msg);
+                //matcher.process();
+                //curr_lasers = matcher.get_processed_laser();
+                //if(curr_lasers.empty()){
+                //    pthread_mutex_unlock(&data_mutex);
+                //    return;
+                //}
+                //particles.s_model.update_grid(&map.grid);
             } 
             pthread_mutex_unlock(&data_mutex);
         }
@@ -269,15 +213,15 @@ class state_t
 
         static void draw(state_t* state, vx_world_t* world)
         {    
-            /*vx_buffer_t *buf = vx_world_get_buffer(state->world,"map");
-              render_grid(state);
-              eecs467::OccupancyGrid& grid = state->map.get_grid();
-              eecs467::Point<float> origin = grid.originInGlobalFrame();
-              vx_object_t *vo = vxo_chain(vxo_mat_translate3(origin.x*15,origin.y*15,-0.01),
-              vxo_mat_scale((double)grid.metersPerCell()*15),
-              vxo_image_from_u8(state->image_buf,0,0));
-              vx_buffer_add_back(buf,vo);
-              vx_buffer_swap(buf);*/
+            vx_buffer_t *buf = vx_world_get_buffer(state->world,"map");
+            render_grid(state);
+            eecs467::OccupancyGrid& grid = state->map.get_grid();
+            eecs467::Point<float> origin = grid.originInGlobalFrame();
+            vx_object_t *vo = vxo_chain(vxo_mat_translate3(origin.x*15,origin.y*15,-0.01),
+                    vxo_mat_scale((double)grid.metersPerCell()*15),
+                    vxo_image_from_u8(state->image_buf,0,0));
+            vx_buffer_add_back(buf,vo);
+            vx_buffer_swap(buf);
         }
 
         static uint8_t to_grayscale(int8_t logOdds)
@@ -288,7 +232,6 @@ class state_t
         static void render_grid(state_t * state)
         {
             eecs467::OccupancyGrid& grid = state->map.get_grid();
-            
             if(state->image_buf == nullptr){
                 state->image_buf = image_u8_create(grid.widthInCells(),grid.heightInCells());
             }
@@ -304,7 +247,7 @@ class state_t
         static void save_map(state_t *state)
         {
             FILE *fp;
-            fp = fopen("test_map.txt","w");
+            fp = fopen("empty_map.txt","w");
             eecs467::OccupancyGrid& grid = state->map.get_grid();
             fprintf(fp,"%d\n",grid.heightInCells());
             fprintf(fp,"%d\n",grid.widthInCells());
@@ -341,10 +284,6 @@ class state_t
             fclose(fp);
         }
 
-
-
-
-
         static void* render_loop(void* data)
         {
             state_t * state = (state_t*) data;
@@ -352,14 +291,14 @@ class state_t
             while (1) {
                 pthread_mutex_lock(&state->data_mutex);
                 vx_buffer_t *buf = vx_world_get_buffer(state->world,"pose_data");
-                render_grid(state);
+                /*render_grid(state);
                 eecs467::OccupancyGrid& grid = state->map.get_grid();
                 eecs467::Point<float> origin = grid.originInGlobalFrame();
                 vx_object_t *vo = vxo_chain(vxo_mat_translate3(origin.x*15,origin.y*15,-0.01),
                         vxo_mat_scale((double)grid.metersPerCell()*15),
                         vxo_image_from_u8(state->image_buf,0,0));
                 vx_buffer_add_back(buf,vo);
-
+                */
                 /*if(state->path.size() > 1){
                   for(int i = 1; i < state->path.size();++i){
                   float pts[] = {state->path[i].x*15,state->path[i].y*15,0.0,
@@ -368,12 +307,12 @@ class state_t
                 vx_resc_t *verts = vx_resc_copyf(pts,6);
                 vx_buffer_add_back(buf,vxo_lines(verts,2,GL_LINES,vxo_lines_style(vx_red,2.0f)));
                 }*/
-                for(int i=0;i<state->curr_lasers.size();i+=5){
+                /*for(int i=0;i<state->curr_lasers.size();i+=5){
                     float pts[] = {state->curr_lasers[i].get_x_pos()*15,state->curr_lasers[i].get_y_pos()*15,0.0,
                         state->curr_lasers[i].get_x_end_pos()*15,state->curr_lasers[i].get_y_end_pos()*15,0.0};
                     vx_resc_t *verts = vx_resc_copyf(pts,6);
                     vx_buffer_add_back(buf,vxo_lines(verts,2,GL_LINES,vxo_lines_style(vx_blue,1.0f)));
-                }
+                }*/
                 /*char buffer[50];
                   sprintf(buffer,"<<center, #000000>> (%.2f,%.2f,%.2f)\n",state->path.back().x,state->path.back().y,state->path.back().theta);
                   vx_object_t *data_size = vxo_text_create(VXO_TEXT_ANCHOR_CENTER, buffer);
@@ -384,18 +323,6 @@ class state_t
                   vx_object_t *data_size = vxo_text_create(VXO_TEXT_ANCHOR_CENTER, buffer);
                   vx_buffer_add_back(buf, vxo_pix_coords(VX_ORIGIN_BOTTOM_RIGHT, vxo_chain(vxo_mat_translate2(-70, 8), vxo_mat_scale(0.8), data_size)));
                   */
-                if(state->frontier_path.size() > 1){
-                    for(int i = 1; i < state->frontier_path.size();++i){
-                        eecs467::Point<float> x0 = eecs467::grid_position_to_global_position(state->frontier_path[i],state->map.grid);
-                        eecs467::Point<float> x1 = eecs467::grid_position_to_global_position(state->frontier_path[i-1],state->map.grid);
-                        float pts[] = {x0.x*15,x0.y*15,0.0,
-                            x1.x*15,x1.y*15,0.0};
-                        //float pts[] = {0*15,0*15,0,15,15,0};
-                        vx_resc_t *verts = vx_resc_copyf(pts,6);
-                        vx_buffer_add_back(buf,vxo_lines(verts,2,GL_LINES,vxo_lines_style(vx_orange,2.0f)));
-                    }
-
-                }
                 if(state->particles.get_size() > 1){
                     float* pts = state->particles.get_particle_coords();
                     int npoints = state->particles.get_size();
@@ -459,21 +386,19 @@ class state_t
 
 };
 
-
-
-
 int main(int argc, char ** argv)
 {
+    MAP_TO_READ = argv[1];
+    printf("%s\n",MAP_TO_READ);
+    color = argv[2];
+    std::cout<<color<<std::endl;
     state_t state;
     state.init_thread();
     //comment below disable the vx
-    /*state.draw(&state,state.world);
+    state.draw(&state,state.world);
     gdk_threads_init();
     gdk_threads_enter();
     gtk_init(&argc, &argv);
-
-    color = *(++argv);
-    //std::cout << "color :" << color << std::endl; 
 
     state.appwrap = vx_gtk_display_source_create(&state.app);
     GtkWidget * window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
@@ -486,7 +411,7 @@ int main(int argc, char ** argv)
     gtk_main(); // Blocks as long as GTK window is open
 
     gdk_threads_leave();
-    vx_gtk_display_source_destroy(state.appwrap);*/
+    vx_gtk_display_source_destroy(state.appwrap);
     //comment above disable vx
     pthread_join(state.animate_thread,NULL);
 

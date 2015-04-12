@@ -253,9 +253,9 @@ class state_t
 
 int main(int argc, char ** argv)
 {
-    MAP_TO_READ = argv[1];
-    printf("%s",MAP_TO_READ);
-    color = *(++argv);
+    // MAP_TO_READ = argv[1];
+    // printf("%s",MAP_TO_READ);
+    color = argv[1];
     state_t state;
     state.init_thread();
 

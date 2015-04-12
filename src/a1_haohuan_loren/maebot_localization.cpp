@@ -36,6 +36,7 @@
 #include <math/gsl_util_rand.h>
 
 static const char* MAP_TO_READ;
+std::string color;
 
 class state_t
 {
@@ -57,7 +58,7 @@ class state_t
         maebot_pose_t curr_collin_pose;
         //std::deque<maebot_laser> curr_lasers;
         //bool first_scan;
-        // vx stuff	
+        // vx stuff 
         vx_application_t app;
         vx_world_t * world;
         zhash_t * layers;
@@ -157,6 +158,15 @@ class state_t
                 //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
                 maebot_pose_t best = particles.get_best();
                 our_path.push_back(best);
+
+                 maebot_pose_t pose_msg;
+                    pose_msg = best;
+
+                    std::string msg_str = "MAEBOT_LOCALIZATION_";
+                    msg_str.append(color);
+
+                    this->lcm.publish(msg_str, &pose_msg);
+
                 float coeff = 0;
                 if(best.y > curr_collin_pose.y){
                     coeff = 1;
@@ -380,6 +390,7 @@ int main(int argc, char ** argv)
 {
     MAP_TO_READ = argv[1];
     printf("%s",MAP_TO_READ);
+    color = argv[2];
     state_t state;
     state.init_thread();
     //comment below disable the vx
