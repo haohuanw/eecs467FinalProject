@@ -33,7 +33,6 @@
 using namespace std;
 
 //============= LCM SETUP ====================
-pthread_mutex_t comms_m;
 lcm::LCM lcm_inst;
 
 void *lcm_comm(void *input){
@@ -63,36 +62,27 @@ struct move_data{
   	double y_dest;
   	double theta_dest;
 
-  	double turn;
-
-  	move_data(){
-  		speed = 0;
-  		x_rob = y_rob = x_dest = y_dest = theta_rob = theta_dest = 0;
-  		turn = false;
-  	}
+  	int turn;
 };
 
 
 //================ MAIN MOTION CLASS ===============
-struct Motion_Class{
-	move_data read;
-	move_data comp;
+class MotionClass{
+	move_data new_dest;
+	move_data dest;
 	odo_data o_read;
 	bool first_read;
 	bool new_odo, new_command;
 
-	Motion_Class(){
-		new_odo = false;
-		first_read = true;
+	MotionClass() : new_odo(false), first_read(true), new_command(false){
 	}
 
-	bool do_something(){
+	bool new_command(){
 		bool ret;
 		pthread_mutex_lock(&comms_m);
 		ret = new_command;
-		comp = read;
+		dest = new_dest;
 		pthread_mutex_unlock(&comms_m);
-		
 
 		return ret;
 	}
@@ -123,7 +113,7 @@ struct Motion_Class{
 		read.turn = msg->turning;
 
 		new_command = true;
-        cout<<"received a bot_commands from world manager"<<channel<<endl;
+        	cout<<"received a bot_commands from world manager "<<channel<<endl;
 		pthread_mutex_unlock(&comms_m);
 	}
 
@@ -355,11 +345,11 @@ struct Motion_Class{
 
 	    double angle_diff;
 
-	    while( not_done(theta_dest, path_pos, path_dest) ){
+	    while( not_done(theta_dest, path_pos, path_dest) && !new_command){
 
-	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
-	    	cout <<"path_position: " << path_pos << endl;
-	    	cout <<"lane_position: " << lane_pos << endl;
+	    	//cout << "theta_current: " << 180*theta_current/M_PI << endl;
+	    	//cout <<"path_position: " << path_pos << endl;
+	    	//cout <<"lane_position: " << lane_pos << endl;
 	    	//BACKUP P controller works
 
 
@@ -452,7 +442,7 @@ int main(int argc, char *argv[]){
 
 	//init LCM
 	Motion_Class C;
-	lcm_inst.subscribe("BOT_COMMANDS", &Motion_Class::bot_commands_handler, &C);
+	lcm_inst.subscribe("MAEBOT_PID_COMMAND_RED", &Motion_Class::bot_commands_handler, &C);
 	lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &Motion_Class::odometry_handler, &C);
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
@@ -461,6 +451,7 @@ int main(int argc, char *argv[]){
 
 	while(true){
 		if(C.do_something()){
+			C.new_command = false;
 			if(C.comp.turn == 1)
 				C.turn_X(C.comp.theta_rob, C.comp.theta_dest);
 			else{

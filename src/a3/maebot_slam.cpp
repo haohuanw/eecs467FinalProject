@@ -155,7 +155,7 @@ class state_t
             if(particles.ready()){
                 //printf("particle filter process\n");
                 particles.update();
-                //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
+                printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
                 maebot_pose_t best = particles.get_best();
                 our_path.push_back(best);
 
