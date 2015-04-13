@@ -194,7 +194,6 @@ class state_t
                     best_point.x = best.x;
                     best_point.y = best.y;
                     
-                    /*
 					wall_expansion = 4;
 					while (wall_expansion >= 1)
 					{
@@ -238,36 +237,36 @@ class state_t
 
 						
 
-                        //printf("position: %f, %f\n", best.x, best.y);
-                        //printf("target: %f, %f\n", target_f.x, target_f.y);
+//printf("position: %f, %f\n", best.x, best.y);
+//printf("target: %f, %f\n", target_f.x, target_f.y);
 
 
-                                                float drive_adjust = 0.0;
-                                                if (drive_dx > 0)
-                                                {
-                                                    drive_adjust = 1.5 * M_PI; //add 270deg right of y axis
-                                                }
-                                                else
-                                                {
-                                                    drive_adjust = 0.5 * M_PI; //add 90deg left of y axis
-                                                }
-
-                                                float theta_tar = atan(drive_dy/drive_dx) + drive_adjust;
-                                                float theta_c = theta_tar - mae_theta;
-                        if (theta_c < 0.0)
+                        float drive_adjust = 0.0;
+                        if (drive_dx > 0)
                         {
-                        	theta_c += 2.0 * M_PI;
+                            drive_adjust = 1.5 * M_PI; //add 270deg right of y axis
                         }
-                        //printf("theta_pos: %f\n", mae_theta*180/M_PI);
-                        //printf("theta_tar: %f\n", theta_tar*180/M_PI);
-                        //printf("theta_c: %f\n", theta_c*180/M_PI);
+                        else
+                        {
+                            drive_adjust = 0.5 * M_PI; //add 90deg left of y axis
+                        }
 
-                                                maebot_motor_command_t drive_cmd;
-                                                if (theta_c < POS_30d || theta_c > ((2.0*M_PI)-POS_30d))
-                                                {//within 30deg of our heading
-                        printf("straight\n");
-                                                    drive_cmd.motor_left_speed = 1.3*L_DRIVE_CMD;
-                                                    drive_cmd.motor_right_speed = 1.3*R_DRIVE_CMD;
+                        float theta_tar = atan(drive_dy/drive_dx) + drive_adjust;
+                        float theta_c = theta_tar - mae_theta;
+if (theta_c < 0.0)
+{
+	theta_c += 2.0 * M_PI;
+}
+//printf("theta_pos: %f\n", mae_theta*180/M_PI);
+//printf("theta_tar: %f\n", theta_tar*180/M_PI);
+//printf("theta_c: %f\n", theta_c*180/M_PI);
+
+                        maebot_motor_command_t drive_cmd;
+                        if (theta_c < POS_30d || theta_c > ((2.0*M_PI)-POS_30d))
+                        {//within 30deg of our heading
+printf("straight\n");
+                            drive_cmd.motor_left_speed = 1.3*L_DRIVE_CMD;
+                            drive_cmd.motor_right_speed = 1.3*R_DRIVE_CMD;
                         }
                         else if (theta_c > POS_30d && theta_c < POS_90d)
                         {//30-90deg left of our heading
@@ -300,7 +299,7 @@ printf("hard right\n");
 printf("motor_cmd (l,r): (%f,%f)\n", drive_cmd.motor_left_speed, drive_cmd.motor_right_speed);
                         lcm.publish("MAEBOT_MOTOR_COMMAND", &drive_cmd);
                     }
-                    //printf("%d %d\n",frontier_path[0].x,frontier_path[0].y);*/
+                    //printf("%d %d\n",frontier_path[0].x,frontier_path[0].y);
                 } 
             }
 	    else{
@@ -319,8 +318,6 @@ printf("motor_cmd (l,r): (%f,%f)\n", drive_cmd.motor_left_speed, drive_cmd.motor
 	    }
             pthread_mutex_unlock(&data_mutex);
         }
-
-
 
         void laser_scan_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_laser_scan_t *msg)
         {
