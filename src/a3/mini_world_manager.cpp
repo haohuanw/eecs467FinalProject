@@ -30,16 +30,16 @@ int main(){
     cmd.x_rob = 0.0;
     cmd.y_rob = 0.0;
     cmd.theta_rob = 0.0;
-    cmd.x_dest = 3.0;
+    cmd.x_dest = 1.0;
     cmd.y_dest = 0.0;
     lcm.publish("MAEBOT_PID_COMMAND_RED",&cmd);
     std::cout<<"publish to the MAEBOT_PID_COMMAND_RED"<<std::endl;
-    usleep(2000000);
+    /*usleep(2000000);
     cmd.x_rob = 0.0;
     cmd.y_rob = 0.0;
     cmd.theta_rob = 0.0;
     cmd.x_dest = 0.0;
     cmd.y_dest = 0.0;
     lcm.publish("MAEBOT_PID_COMMAND_RED",&cmd);
-    std::cout<<"publish a stop override"<<std::endl; 
+    std::cout<<"publish a stop override"<<std::endl;*/
 }
