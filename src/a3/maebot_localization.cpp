@@ -70,19 +70,16 @@ class state_t
         FILE *odo_fp;
         FILE *error_fp;
 
+        bool init;
 
     public:
         state_t()
         {
             //initialize particles at (0,0,0)
-            maebot_pose_t temp;
-            temp.x=0;
-            temp.y=0;
-            temp.theta=0;
-
+            init = 1;
             //read_map();
             map = occupancy_map(5.0,5.0,0.05,1.0);
-            particles = particle_data(1000, temp, &map.grid);
+
             read_map();
             //first_scan = true;
             //GUI init stuff
@@ -107,9 +104,8 @@ class state_t
 
             image_buf = nullptr;
 
-            lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
-            lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
-            lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+            lcm.subscribe("MAEBOT_IMAGE_POS_RED", &state_t::init_handler, this);
+
             pose_fp = fopen("pose_data.txt","w");
             odo_fp = fopen("odo_data.txt","w");
             error_fp = fopen("error_data.txt","w");
@@ -131,6 +127,20 @@ class state_t
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
             pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+        }
+
+        void init_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
+            
+            if(init){
+                pthread_mutex_lock(&data_mutex);
+
+                particles = particle_data(1000, *msg, &map.grid);
+                lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
+                lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
+                lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+
+                pthread_mutex_unlock(&data_mutex);
+            }
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
