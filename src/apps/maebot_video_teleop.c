@@ -18,8 +18,8 @@
 
 #include "lcmtypes/maebot_motor_command_t.h"
 
-#define MAX_REVERSE_SPEED -0.1f
-#define MAX_FORWARD_SPEED 0.1f
+#define MAX_REVERSE_SPEED -0.2f
+#define MAX_FORWARD_SPEED 0.2f
 
 typedef struct
 {
