@@ -138,9 +138,10 @@ class state_t
                 lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
                 lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
                 lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
-
+                init = 0;
                 pthread_mutex_unlock(&data_mutex);
             }
+
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
