@@ -85,15 +85,11 @@ class state_t
         state_t()
         {
             //initialize particles at (0,0,0)
-            maebot_pose_t temp;
-            temp.x=0;
-            temp.y=0;
-            temp.theta=0;
 
             //read_map();
             //particles.has_map = true;
             map = occupancy_map(5.0,5.0,0.05,1.0);
-            particles = particle_data(1500, temp, &map.grid);
+            
             p_plan = path_planning(&map.grid);
             first_scan = true;
             map_finished = false;
@@ -126,6 +122,7 @@ class state_t
             lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
             lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
             lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+            lcm.subscribe("MAEBOT_IMAGE_POS_RED", &state_t::init_handler, this);
         }
 
         ~state_t()
@@ -143,6 +140,14 @@ class state_t
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
             pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+        }
+
+        void init_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
+            pthread_mutex_lock(&data_mutex);
+
+            particles = particle_data(1500, temp, &map.grid);
+
+            pthread_mutex_unlock(&data_mutex);
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
