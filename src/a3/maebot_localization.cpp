@@ -104,7 +104,9 @@ class state_t
 
             image_buf = nullptr;
 
-            lcm.subscribe("MAEBOT_IMAGE_POS_RED", &state_t::init_handler, this);
+            std::string init_str = "MAEBOT_IMAGE_POS_";
+            msg_str.append(color);
+            lcm.subscribe(init_str, &state_t::init_handler, this);
 
             pose_fp = fopen("pose_data.txt","w");
             odo_fp = fopen("odo_data.txt","w");
