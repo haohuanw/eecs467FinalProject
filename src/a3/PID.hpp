@@ -25,8 +25,9 @@
 #include "math/angle_functions.hpp"
 #include "math.h"
 
-#define MIN_SPEED 0.16f
-#define MAX_SPEED 0.20f
+#define START_SPEED 0.20f
+#define MIN_SPEED 0.18f
+#define MAX_SPEED 0.22f
 #define MIN_GAIN 0.0004f
 #define MAX_GAIN 0.0008f
 
@@ -55,15 +56,17 @@ class PID
         move_data dest;
         odo_data odometry;
         bool is_first_read;
-        bool command;
+        bool stop_command;
         lcm::LCM *lcm;
 
         pthread_mutex_t command_mutex;
+        pthread_cond_t command_cv;
 
     public:
-        PID(lcm::LCM *lcm_) : is_first_read(true), command(false), lcm(lcm_)
+        PID(lcm::LCM *lcm_) : is_first_read(true), stop_command(false), lcm(lcm_)
         {
             pthread_mutex_init(&command_mutex, NULL);
+            pthread_cond_init(&command_cv, NULL);
 
             dest.x_rob = 0;
             dest.y_rob = 0;
@@ -71,6 +74,7 @@ class PID
             dest.x_dest = 0;
             dest.y_dest = 0;
             dest.theta_dest = 0;
+
             odometry.left_ticks = 0;
             odometry.right_ticks = 0;
         }
@@ -95,10 +99,14 @@ class PID
 
         bool at_destination()
         {
+            double path_pos, path_dest, lane_pos, lane_dest;
+
             pthread_mutex_lock(&command_mutex);
-            bool retval = dist(dest.x_rob, dest.y_rob, dest.x_dest, dest.y_dest) < 0.05;
+            double theta_dest = dest.theta_dest;
+            get_path_and_lane(path_pos, lane_pos, path_dest, lane_dest);
             pthread_mutex_unlock(&command_mutex);
-            return retval;
+
+            return !not_done(path_pos, path_dest, theta_dest);
         }
 
         bool not_done(double& path_pos, double& path_dest, double& theta_dest)
@@ -134,8 +142,23 @@ class PID
             }
         }
 
+        // if get a stop command, wait until get a move command
+        void wait_until_clear(maebot_motor_command_t cmd)
+        {
+            cmd.motor_left_speed = 0.0;
+            cmd.motor_right_speed = 0.0;
+            lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
+            pthread_mutex_lock(&command_mutex);
+            while(stop_command)
+            {
+                pthread_cond_wait(&command_cv, &command_mutex);
+            }
+            pthread_mutex_unlock(&command_mutex);
+        }
+
         void turn_to_dest()
         {
+            std::cout<<"current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
             maebot_motor_command_t cmd;
             bot_commands_t ret_msg = {0, 0, 0, 0, 0, 0, 1};
 
@@ -146,18 +169,19 @@ class PID
 
             if(eecs467::angle_diff(angle_rob, angle_dest) > 0)
             {
-                cmd.motor_left_speed = 0.18;
-                cmd.motor_right_speed = -0.18;
+                cmd.motor_left_speed = START_SPEED;
+                cmd.motor_right_speed = -START_SPEED;
             }
             else
             {
-                cmd.motor_left_speed = -0.18;
-                cmd.motor_right_speed = 0.18;
+                cmd.motor_left_speed = -START_SPEED;
+                cmd.motor_right_speed = START_SPEED;
             }
 
             double angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
             while(fabs(angle_diff) > M_PI/60)
             {
+                if(stop_command) { wait_until_clear(cmd); }
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
                 usleep(5000);
 
@@ -242,19 +266,19 @@ class PID
             }
 	    	else{
 
-	    		cmd.motor_left_speed = 0.17;
-	    		cmd.motor_right_speed = 0.163;
+	    		cmd.motor_left_speed = START_SPEED;
+	    		cmd.motor_right_speed = START_SPEED;
 
 		    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 ){
                     //std::cout << "straight left" << std::endl;
-		    		cmd.motor_left_speed = 0.175;
-	    			cmd.motor_right_speed = 0.165;
+		    		cmd.motor_left_speed = START_SPEED + 0.005;
+	    			cmd.motor_right_speed = START_SPEED;
 				}
 				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
 				else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 ) {
                     //std::cout << "straight right" << std::endl;
-		    		cmd.motor_left_speed = 0.165;
-	    			cmd.motor_right_speed = 0.175;
+		    		cmd.motor_left_speed = START_SPEED;
+	    			cmd.motor_right_speed = START_SPEED + 0.005;
 				}
 	    	}
             //std::cout << "updated cmd: " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;
@@ -267,8 +291,8 @@ class PID
             //std::cout << "dest position:    " << dest.x_dest << " " << dest.y_dest << std::endl;
             maebot_motor_command_t cmd;
             bot_commands_t bot_cmd = {0, 0, 0, 0, 0, 0, 1};
-            cmd.motor_left_speed = 0.18;
-            cmd.motor_right_speed = 0.18;
+            cmd.motor_left_speed = START_SPEED;
+            cmd.motor_right_speed = START_SPEED;
             double path_pos, path_dest, lane_pos, lane_dest;
 
             pthread_mutex_lock(&command_mutex);
@@ -281,11 +305,12 @@ class PID
 
             while(not_done(path_pos, path_dest, theta_dest))
             {
+                if(stop_command) { wait_until_clear(cmd); }
                 std::cout << "current position: " << dest.x_rob << " " << dest.y_rob << std::endl;
                 std::cout << "dest position:    " << dest.x_dest << " " << dest.y_dest << std::endl;
                 //std::cout << "current: (" << dest.x_rob << ", " << dest.y_rob << ", " << dest.theta_rob << ")\n";
                 //std::cout << "dest:    (" << dest.x_dest << ", " << dest.y_dest << ", " << dest.theta_dest << ")\n";
-                //std::cout<<"current theta:"<<theta_rob<<"  dest theta:"<<theta_dest<<std::endl;
+                std::cout<<"current theta:"<<theta_rob<<"  dest theta:"<<theta_dest<<std::endl;
                 correct_motor_speeds(cmd, path_pos, lane_pos, path_dest, lane_dest, theta_rob, theta_dest);
 
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
@@ -303,9 +328,6 @@ class PID
             cmd.motor_right_speed = 0.0;
             lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
             lcm->publish("MAEBOT_PID_FEEDBACK_RED", &bot_cmd);
-            pthread_mutex_lock(&command_mutex);
-            command = false;
-            pthread_mutex_unlock(&command_mutex);
             //std::cout << "outside while loop" << std::endl;
         }
 };

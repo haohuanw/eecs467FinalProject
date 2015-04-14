@@ -98,6 +98,7 @@ animate_thread (void *data)
     while (state->running) 
     {
 		//cout << "Animate Thread!" << endl;
+        vx_buffer_t* buff = vx_world_get_buffer(state->vxworld,"points");
 		image_u32_t *im = image_u32_create(state->grid.widthInCells(), state->grid.heightInCells());
 		for(int y = 0; y < im->height; y++)
 		{
@@ -117,7 +118,7 @@ animate_thread (void *data)
         //vxo_mat_translate3(-im->width/2., -im->height/2., 0.);
 
         pthread_mutex_lock(&state->gui_mutex);
-        vx_buffer_add_back (vx_world_get_buffer (state->vxworld, "bitmap"),
+        vx_buffer_add_back (buff,
                             vxo_chain (mat_scale,
                                        vxo_mat_translate3(-im->width/2., -im->height/2., 0.),
                                        vo));// drawing happens here
@@ -126,54 +127,22 @@ animate_thread (void *data)
         std::vector<float> points;
         for(unsigned int i = 0; i < state->poses.size(); i++)
         {
-            /*if(i == state->poses.size() - 1)
+            if(i == state->poses.size() - 1)
             {
                 std::cout << "last pose: " << state->poses[i].x << ", " << state->poses[i].y << std::endl;
-            }*/
+            }
             points.push_back((float)(state->poses[i].x/state->grid.metersPerCell()));
             points.push_back((float)(state->poses[i].y/state->grid.metersPerCell()));
             points.push_back(0);
         }
         
-        //std::cout << "true poses: " << state->truePoses.size() << std::endl;
-        std::vector<float> truePoints;
-        for(unsigned int i = 0; i < state->truePoses.size(); i++)
-        {
-            /*if(i == state->truePoses.size() - 1)
-            {
-                std::cout << "last true pose: " << state->truePoses[i].x << ", " << state->truePoses[i].y << std::endl;
-            }*/
-            truePoints.push_back((float)(state->truePoses[i].x/state->grid.metersPerCell()));
-            truePoints.push_back((float)(state->truePoses[i].y/state->grid.metersPerCell()));
-            truePoints.push_back(0);
-        }
-
-        //std::cout << "particles size: " << state->particles.size() << std::endl;
-        std::vector<float> particlePoints;
-        for(unsigned int i = 0; i < state->particles.size(); i++)
-        {
-            //if(i == state->particles.size() - 1)
-            //{
-            //    std::cout << state->particles[i].x << ", " << state->particles[i].y << std::endl;
-            //}
-            particlePoints.push_back((float)(state->particles[i].x/state->grid.metersPerCell()));
-            particlePoints.push_back((float)(state->particles[i].y/state->grid.metersPerCell()));
-            particlePoints.push_back(0);
-        }
-        //std::cout << "particle point size: " << particlePoints.size() << std::endl;
         vx_resc_t *verts = vx_resc_copyf(&points[0], points.size());
-        vx_resc_t *trueVerts = vx_resc_copyf(&truePoints[0], truePoints.size());
-        vx_resc_t *particleVerts = vx_resc_copyf(&particlePoints[0], particlePoints.size());
 
-        vx_buffer_t *buff = vx_world_get_buffer(state->vxworld, "points");
         vx_buffer_add_back (buff,
                             vxo_chain (mat_scale,
-                                       vxo_points(verts, state->poses.size(), vxo_points_style(vx_green, 4.0f)),
-                                       vxo_points(trueVerts, state->truePoses.size(), vxo_points_style(vx_blue, 4.0f)),
-                                       vxo_points(particleVerts, state->particles.size(), vxo_points_style(vx_red, 2.0f))));
+                                       vxo_points(verts, state->poses.size(), vxo_points_style(vx_green, 4.0f))));
         
-        vx_buffer_swap (vx_world_get_buffer (state->vxworld, "bitmap"));
-        vx_buffer_swap (vx_world_get_buffer (state->vxworld, "points"));
+        vx_buffer_swap (buff);
         //vx_buffer_swap (vx_world_get_buffer (state->vxworld, "points2"));
         image_u32_destroy (im);
 
@@ -257,12 +226,6 @@ main (int argc, char *argv[])
             &gui_handler);
     state->lcm->subscribe("MAEBOT_POSE_GUI", 
             &LocationHandler::handlePose,
-            &location_handler);
-    state->lcm->subscribe("MAEBOT_POSE", 
-            &LocationHandler::handleTruePose,
-            &location_handler);
-    state->lcm->subscribe("MAEBOT_PARTICLE_GUI", 
-            &LocationHandler::handleParticles,
             &location_handler);
 
     // Parse arguments from the command line, showing the help

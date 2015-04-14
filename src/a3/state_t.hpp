@@ -94,7 +94,8 @@ class state_t{
             m.color = RED;
             m.curr_pos = {DBL_MAX,DBL_MAX};
             m.curr_dest = {DBL_MAX,DBL_MAX};
-            m.hsv_range.read_hsv_from_file("../calibration/green_maebot_hsv_range.txt");
+            m.particle_pos = {DBL_MAX,DBL_MAX};
+            m.hsv_range.read_hsv_from_file("../calibration/red_maebot_hsv_range.txt");
 
             maebot_list[RED] = m;
             occupancy_grid = eecs467::OccupancyGrid(5.0,5.0,0.05);
@@ -102,6 +103,7 @@ class state_t{
             pthread_mutex_init(&mutex,NULL);
             pthread_mutex_init(&data_mutex,NULL);
             lcm.subscribe("MAEBOT_DEST",&state_t::maebot_dest_handler,this);
+            lcm.subscribe("MAEBOT_LOCALIZATION_RED",&state_t::maebot_best_particle_handler,this);
         }
 
         ~state_t(){
@@ -109,6 +111,24 @@ class state_t{
             pg_destroy(pg);
             pthread_mutex_destroy(&mutex);
             pthread_mutex_destroy(&data_mutex);
+        }
+
+        void maebot_best_particle_handler(const lcm::ReceiveBuffer* rbuf,const std::string& channel, const maebot_pose_t *msg){
+            pthread_mutex_lock(&data_mutex);
+            if(channel == "MAEBOT_LOCALIZATION_RED"){
+               maebot_list[RED].particle_pos.x = msg->x;
+               maebot_list[RED].particle_pos.y = msg->y; 
+               std::cout<<"receive best particle"<<msg->x<<" "<<msg->y<<std::endl;
+            }
+            if(channel == "MAEBOT_LOCALIZATION_BLUE"){
+               maebot_list[BLUE].particle_pos.x = msg->x;
+               maebot_list[BLUE].particle_pos.y = msg->y; 
+            }
+            if(channel == "MAEBOT_LOCALIZATION_GREEN"){
+               maebot_list[GREEN].particle_pos.x = msg->x;
+               maebot_list[GREEN].particle_pos.y = msg->y; 
+            }
+            pthread_mutex_unlock(&data_mutex);
         }
 
         void maebot_dest_handler(const lcm::ReceiveBuffer* rbuf,const std::string& channel,const ui_dest_list_t *msg){

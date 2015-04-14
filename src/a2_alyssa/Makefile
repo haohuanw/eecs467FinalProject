@@ -8,7 +8,7 @@ CXXFLAGS = $(CXXFLAGS_STD) \
 	$(CFLAGS_COMMON) \
 	$(CFLAGS_LCMTYPES) \
 	$(CFLAGS_GSL) \
-    -g
+    -O3
 
 CFLAGS = $(CFLAGS_STD) \
 	$(CFLAGS_VX_GTK) \
@@ -17,7 +17,7 @@ CFLAGS = $(CFLAGS_STD) \
 	$(CFLAGS_COMMON) \
 	$(CFLAGS_LCMTYPES) \
 	$(CFLAGS_GSL) \
-    -g
+    -O3
 
 LDFLAGS = $(LDFLAGS_STD) \
 	  $(LDFLAGS_VX_GL) \

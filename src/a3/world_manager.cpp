@@ -55,8 +55,8 @@ class state_t
             // initialize the things
             for(int i = 0; i < NUM_MAEBOT; i++)
             {
-                maebot_locations[i].x = 0;
-                maebot_locations[i].y = 0;
+                maebot_locations[i].x = 0.0;
+                maebot_locations[i].y = 0.0;
                 maebot_locations[i].theta = 0;
                 maebot_locations[i].utime = 0;
                 reached_location[i] = false;

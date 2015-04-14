@@ -16,7 +16,7 @@ typedef maebot_pose_t maebot_pose_delta_t;
 
 class particle_data{
 public:
-    particle_data(){}
+    particle_data(){};
     particle_data(int numb, maebot_pose_t starting_loc,eecs467::OccupancyGrid *g);
     void push_odo(maebot_motor_feedback_t msg);
     void push_scan(maebot_laser_scan_t msg); 

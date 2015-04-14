@@ -62,24 +62,6 @@ class LocationHandler
             state->poses.push_back(*msg);
             pthread_mutex_unlock(&state->gui_mutex);
         }
-
-        void handleTruePose(const lcm::ReceiveBuffer *rbuf,
-                            const std::string& channel,
-                            const maebot_pose_t *msg)
-        {
-            pthread_mutex_lock(&state->gui_mutex);
-            state->truePoses.push_back(*msg);
-            pthread_mutex_unlock(&state->gui_mutex);
-        }
-        
-        void handleParticles(const lcm::ReceiveBuffer *rbuf,
-                            const std::string& channel,
-                            const maebot_pose_t *msg)
-        {
-            pthread_mutex_lock(&state->gui_mutex);
-            state->particles.push_back(*msg);
-            pthread_mutex_unlock(&state->gui_mutex);
-        }
 };
 
 #endif

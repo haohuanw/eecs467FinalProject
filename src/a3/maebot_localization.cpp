@@ -70,19 +70,16 @@ class state_t
         FILE *odo_fp;
         FILE *error_fp;
 
+        bool init;
 
     public:
         state_t()
         {
             //initialize particles at (0,0,0)
-            maebot_pose_t temp;
-            temp.x=0;
-            temp.y=0;
-            temp.theta=0;
-
+            init = 1;
             //read_map();
             map = occupancy_map(5.0,5.0,0.05,1.0);
-            particles = particle_data(1000, temp, &map.grid);
+
             read_map();
             //first_scan = true;
             //GUI init stuff
@@ -107,9 +104,10 @@ class state_t
 
             image_buf = nullptr;
 
-            lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
-            lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
-            lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+            std::string init_str = "MAEBOT_IMAGE_POS_";
+            init_str.append(color);
+            lcm.subscribe(init_str, &state_t::init_handler, this);
+
             pose_fp = fopen("pose_data.txt","w");
             odo_fp = fopen("odo_data.txt","w");
             error_fp = fopen("error_data.txt","w");
@@ -130,7 +128,25 @@ class state_t
         void init_thread()
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
-            pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+            //pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+        }
+
+        void init_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
+            
+            if(init){
+                pthread_mutex_lock(&data_mutex);
+
+                particles = particle_data(1000, *msg, &map.grid);
+                lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
+                lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
+                lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+                init = 0;
+                std::string msg_str = "MAEBOT_LOCALIZATION_";
+                msg_str.append(color);
+                this->lcm.publish(msg_str, msg);
+                pthread_mutex_unlock(&data_mutex);
+            }
+
         }
 
         void pose_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
@@ -155,7 +171,7 @@ class state_t
             if(particles.ready()){
                 //printf("particle filter process\n");
                 particles.update();
-                //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
+                printf("best particle: %f %f %f\n",particles.get_best().x,particles.get_best().y, particles.get_best().theta);
                 maebot_pose_t best = particles.get_best();
                 our_path.push_back(best);
 
@@ -262,7 +278,7 @@ class state_t
         void read_map()
         {
             FILE *fp;
-            uint8_t temp;
+            int temp;
             fp = fopen(MAP_TO_READ,"r");
             fscanf(fp,"%d\n",&temp);
             if(temp != map.grid.heightInCells()){
@@ -279,7 +295,7 @@ class state_t
                 for(size_t x = 0; x < map.grid.widthInCells(); x++){
                     fscanf(fp,"%d ",&temp);
                     map.grid.setLogOdds(x,y,temp);
-                    std::cout<<temp<<std::endl;
+                    //std::cout<<temp<<std::endl;
                 }
             }
             fclose(fp);
@@ -393,9 +409,9 @@ int main(int argc, char ** argv)
     printf("%s",MAP_TO_READ);
     color = argv[2];
     state_t state;
-    state.init_thread();
+    //state.init_thread();
     //comment below disable the vx
-    state.draw(&state,state.world);
+    /*state.draw(&state,state.world);
     gdk_threads_init();
     gdk_threads_enter();
     gtk_init(&argc, &argv);
@@ -411,9 +427,11 @@ int main(int argc, char ** argv)
     gtk_main(); // Blocks as long as GTK window is open
 
     gdk_threads_leave();
-    vx_gtk_display_source_destroy(state.appwrap);
+    vx_gtk_display_source_destroy(state.appwrap);*/
     //comment above disable vx
-    pthread_join(state.animate_thread,NULL);
-
-    vx_global_destroy();
+    //pthread_join(state.animate_thread,NULL);
+    while(1){
+        state.lcm.handle();
+    }
+    //vx_global_destroy();
 }

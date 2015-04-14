@@ -427,8 +427,11 @@ class MotionClass{
 	   
 
 	    //tell world manager we're done
+        msg_ptr->motor_left_speed = 0.0;
+        msg_ptr->motor_right_speed = 0.0;
 	    bot_msg_ptr->reach_dest = 1;
 	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
+	    lcm_inst.publish("MAEBOT_MOTOR_COMMAND", msg_ptr);
 
 
 	}

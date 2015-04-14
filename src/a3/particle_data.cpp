@@ -8,6 +8,7 @@
 #include <string>
 #include <math/angle_functions.hpp>
 
+
 particle_data::particle_data(int numb, maebot_pose_t starting_loc,eecs467::OccupancyGrid *g){
     number = numb;
     rand_gen = gslu_rand_rng_alloc();
@@ -15,9 +16,27 @@ particle_data::particle_data(int numb, maebot_pose_t starting_loc,eecs467::Occup
     weight.reserve(number);
     old_weight.reserve(number);
     old_pose.reserve(number);
+
+    double factor = 0.01;
     for(int i=0; i < number ; ++i){
-        old_pose.push_back(starting_loc);
-        pose.push_back(starting_loc);
+        double x = starting_loc.x;
+        double y = starting_loc.y;
+        double the = starting_loc.theta;
+
+        x += gslu_rand_normal(rand_gen) * factor;
+        y += gslu_rand_normal(rand_gen) * factor;
+        the += gslu_rand_uniform(rand_gen) * 2*M_PI;
+        the -= M_PI;
+
+        maebot_pose_t newpose;
+        newpose.x = x;
+        newpose.y = y;
+        newpose.theta = 0;
+        old_pose.push_back(newpose);
+        pose.push_back(newpose);
+
+        // old_pose.push_back(starting_loc);
+        // pose.push_back(starting_loc);
         float temp = (float)(1.0/number);
         old_weight.push_back(temp);
         weight.push_back(temp);

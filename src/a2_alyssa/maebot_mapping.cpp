@@ -55,7 +55,6 @@ struct state
     pthread_mutex_t cmd_mutex;
     pthread_t cmd_thread;
 
-    //pthread_t lcm_thread;
     pthread_t render_thread;
     pthread_mutex_t render_mutex;
     pthread_mutex_t layer_mutex;
@@ -78,15 +77,6 @@ static int verbose = 0;
 
 static state_t *global_state;
 
-//static void * receive_lcm(void *data) 
-//{
-//    state_t *state = (state_t *)data; 
-//    
-//    while(1)
-//        state->lcm->handle();
-//    return NULL;
-//}
-
 // This thread continuously publishes command messages to the maebot
 static void* send_cmds(void *data)
 {
@@ -95,74 +85,11 @@ static void* send_cmds(void *data)
 
     while (state->running) {
         pthread_mutex_lock(&state->cmd_mutex);
-        matd_t *click = matd_create_data(3, 1, state->last_click);
-        double mag = matd_vec_mag(click);
-        matd_t *n = click;
-        if (mag != 0) {
-            n = matd_vec_normalize(click);  // Leaks memory
-        }
-        double len = dmin(mag, state->joy_bounds);
-
-        // Map vector direction to motor command.
-        state->cmd.utime = utime_now();
-
-        int sign_x = matd_get(n, 0, 0) >= 0; // > 0 if positive
-        int sign_y = matd_get(n, 1, 0) >= 0; // > 0 if positive
-        float magx = fabs(matd_get(n, 0, 0));
-        float magy = fabs(matd_get(n, 1, 0));
-        float x2y = magx > 0 ? (magx-magy)/magx : 0.0f;
-        float y2x = magy > 0 ? (magy-magx)/magy : 0.0f;
-        float scale = 1.0f*len/state->joy_bounds;
-
-        // Quadrant check
-        if (sign_y && sign_x) {
-            // Quad I
-            state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale*y2x;
-            }
-        } else if (sign_y && !sign_x) {
-            // Quad II
-            state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale*y2x;
-            }
-        } else if (!sign_y && !sign_x) {
-            // Quad III
-            state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_right_speed = MAX_FORWARD_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale*y2x;
-            }
-        } else {
-            // Quad IV
-            state->cmd.motor_right_speed = MAX_REVERSE_SPEED*scale;
-            if (magx > magy) {
-                state->cmd.motor_left_speed = MAX_FORWARD_SPEED*scale*x2y;
-            } else {
-                state->cmd.motor_left_speed = MAX_REVERSE_SPEED*scale*y2x;
-            }
-        }
-
-        if (mag != 0) {
-            matd_destroy(n);
-        }
-        matd_destroy(click);
-
         // Publish
         state->lcm->publish("MAEBOT_MOTOR_COMMAND", &(state->cmd));
-
         pthread_mutex_unlock(&state->cmd_mutex);
-        if(task2)
-        {
-            auto a = state->grid_mapper->getOccupancyGrid().toLCM();
-            state->lcm->publish("OCCUPANCY_GRID_GUI_TASK2", &a);
-        }
+        auto a = state->grid_mapper->getOccupancyGrid().toLCM();
+        state->lcm->publish("OCCUPANCY_GRID_GUI_TASK2", &a);
 
         usleep(1000000/Hz);
     }
@@ -176,33 +103,15 @@ static void* update_map(void *data)
 
     while(state->running)
     {
-        if(task2)
+        state->slam->lockSlamMutex();
+        while(!state->slam->scanReceived())
         {
-            state->slam->lockSlamMutex();
-            while(!state->slam->scanReceived())
-            {
-                state->slam->wait();
-            }
-            state->slam->unlockSlamMutex();
-
-            state->slam->updateParticles();
-            //state->slam->publish();
+            state->slam->wait();
         }
-        else if(task1)
-        {
-            state->grid_mapper->lockMapperMutex();
+        state->slam->unlockSlamMutex();
 
-            while(state->grid_mapper->laserScansEmpty() || state->grid_mapper->posesEmpty())        
-                state->grid_mapper->wait();
-            state->grid_mapper->unlockMapperMutex();
-            std::cout << "received message" << std::endl;
-
-            LaserScan updated_scan = state->grid_mapper->calculateLaserOrigins();
-            if(!updated_scan.valid) continue;
-
-            state->grid_mapper->updateGrid(updated_scan);
-            state->grid_mapper->publishOccupancyGrid(updated_scan.end_pose);
-        }
+        state->slam->updateParticles();
+        state->slam->publish();
     }
     return NULL;
 }
@@ -225,33 +134,26 @@ int main(int argc, char **argv)
     pthread_mutex_init(&state->lcm_mutex, NULL);
     pthread_mutex_init(&state->render_mutex, NULL);
 
-//feenableexcept(FE_DIVBYZERO| FE_INVALID|FE_OVERFLOW); 
-feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
+    //feenableexcept(FE_DIVBYZERO| FE_INVALID|FE_OVERFLOW); 
+    feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
-    if(task2)
+    std::cout << "making grid" << std::endl;
+    std::ifstream input("../ground_truth/test_map.txt");
+    assert(input.good());
+    int width = 0, 
+        height = 0;
+    double metersPerCell = 0.05, 
+           logOdds = 0;
+    input >> width >> height;
+    assert(width && height);
+    state->grid_mapper = new OccupancyGridMapper(width*metersPerCell, height*metersPerCell, metersPerCell);
+    for(int y = 0; y < height; y++)
     {
-        std::cout << "making grid" << std::endl;
-        std::ifstream input("../src/a1_task2/figure_eight.txt");
-        assert(input.good());
-        int width = 0, 
-            height = 0;
-        double metersPerCell = 0, 
-               logOdds = 0;
-        input >> width >> height >> metersPerCell;
-        assert(width && height && metersPerCell);
-        state->grid_mapper = new OccupancyGridMapper(width*metersPerCell, height*metersPerCell, metersPerCell);
-        for(int y = 0; y < height; y++)
+        for(int x = 0; x < width; x++)
         {
-            for(int x = 0; x < width; x++)
-            {
-                input >> logOdds;
-                state->grid_mapper->setLogOddsMapper(x, y, logOdds);
-            }
+            input >> logOdds;
+            state->grid_mapper->setLogOddsMapper(x, y, logOdds);
         }
-    }
-    else
-    {
-        state->grid_mapper = new OccupancyGridMapper;
     }
     state->slam = new Slam(state->grid_mapper);
     state->grid_mapper->setLCM(state->lcm);
@@ -294,7 +196,6 @@ feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
     // Spin up threads
     pthread_create(&state->cmd_thread, NULL, send_cmds, (void*)state);
-    //    pthread_create(&state->lcm_thread, NULL, receive_lcm, (void*)state);
     pthread_create(&state->update_map_thread, NULL, update_map, state);
 
     // Loop forever

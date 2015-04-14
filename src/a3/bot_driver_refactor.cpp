@@ -57,8 +57,16 @@ class state_t
             pid.dest.x_dest = msg->x_dest;
             pid.dest.y_dest = msg->y_dest;
 
-            pid.command = true;
-            
+            if(pid.dest.x_rob == pid.dest.x_dest && pid.dest.y_rob == pid.dest.y_dest)
+            {
+                pid.stop_command = true;
+            }
+            else
+            {
+                pid.stop_command = false;
+                pthread_cond_signal(&pid.command_cv);
+            }
+
             if(pid.dest.x_dest > pid.dest.x_rob) { pid.dest.theta_dest = 0; }
             else if(pid.dest.x_dest < pid.dest.x_rob) { pid.dest.theta_dest = M_PI; }
             else if(pid.dest.y_dest > pid.dest.y_rob) { pid.dest.theta_dest = M_PI/2.0; }
@@ -112,11 +120,11 @@ int main()
     pthread_create(&state.lcm_thread, NULL, lcm_handle_thread, (void*)(&state.lcm_inst));
     while(1)
     {
-        if(state.pid.command)
+        if(!state.pid.at_destination())
         {
             if(state.pid.theta_error() > M_PI/6)
             {
-                //std::cout << "theta error: " << state.pid.theta_error() << std::endl;
+                std::cout << "theta error: " << state.pid.theta_error() << std::endl;
                 std::cout << "turn" << std::endl;
                 state.pid.turn_to_dest();
             }

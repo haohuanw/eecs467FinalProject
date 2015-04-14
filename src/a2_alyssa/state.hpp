@@ -70,8 +70,6 @@ struct gui_state {
     // occupancy grid stuff
     eecs467::OccupancyGrid grid;
     std::vector<maebot_pose_t> poses;
-    std::vector<maebot_pose_t> truePoses;
-    std::vector<maebot_pose_t> particles;
 
     int location_count;
 };
