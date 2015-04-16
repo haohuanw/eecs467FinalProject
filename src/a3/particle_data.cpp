@@ -31,7 +31,7 @@ particle_data::particle_data(int numb, maebot_pose_t starting_loc,eecs467::Occup
         maebot_pose_t newpose;
         newpose.x = x;
         newpose.y = y;
-        newpose.theta = 0;
+        newpose.theta = M_PI/2.0;
         old_pose.push_back(newpose);
         pose.push_back(newpose);
 

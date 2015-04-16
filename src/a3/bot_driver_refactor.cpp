@@ -66,11 +66,23 @@ class state_t
                 pid.stop_command = false;
                 pthread_cond_signal(&pid.command_cv);
             }
-
-            if(pid.dest.x_dest > pid.dest.x_rob) { pid.dest.theta_dest = 0; }
-            else if(pid.dest.x_dest < pid.dest.x_rob) { pid.dest.theta_dest = M_PI; }
-            else if(pid.dest.y_dest > pid.dest.y_rob) { pid.dest.theta_dest = M_PI/2.0; }
-            else { pid.dest.theta_dest = -M_PI/2.0; }
+            double dx = fabs(pid.dest.x_dest - pid.dest.x_rob);
+            double dy = fabs(pid.dest.y_dest - pid.dest.y_rob);
+            if((pid.dest.x_dest > pid.dest.x_rob) && (dy<dx)) 
+            { 
+                pid.dest.theta_dest = 0; 
+            }
+            else if((pid.dest.x_dest < pid.dest.x_rob) && (dy<dx)) 
+            { 
+                pid.dest.theta_dest = M_PI; 
+            }
+            else if((pid.dest.y_dest > pid.dest.y_rob) && (dx<dy)) 
+            { 
+                pid.dest.theta_dest = M_PI/2.0; 
+            }
+            else if((pid.dest.y_dest < pid.dest.y_rob) && (dx<dy)){ 
+                pid.dest.theta_dest = -M_PI/2.0; 
+            }
 
             pthread_mutex_unlock(&pid.command_mutex);
         }

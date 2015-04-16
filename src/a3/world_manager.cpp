@@ -73,6 +73,9 @@ class state_t
             lcm.subscribe("MAEBOT_LOCALIZATION_RED",   &state_t::maebot_localization_handler, this);
             lcm.subscribe("MAEBOT_LOCALIZATION_BLUE",  &state_t::maebot_localization_handler, this);
             lcm.subscribe("MAEBOT_LOCALIZATION_GREEN", &state_t::maebot_localization_handler, this);
+            lcm.subscribe("MAEBOT_PID_COMMAND_RED", &state_t::maebot_feedback_handler, this);
+            lcm.subscribe("MAEBOT_PID_COMMAND_BLUE", &state_t::maebot_feedback_handler, this);
+            lcm.subscribe("MAEBOT_PID_COMMAND_GREEN", &state_t::maebot_feedback_handler, this);
         }
 
         ~state_t()
@@ -92,6 +95,7 @@ class state_t
             pthread_mutex_lock(&localization_mutex);
             if(channel == "MAEBOT_LOCALIZATION_RED")
             {
+                std::cout << "updating localization" << std::endl;
                 maebot_locations[RED] = *msg;
             }
             else if(channel == "MAEBOT_LOCALIZATION_BLUE")
@@ -129,23 +133,26 @@ class state_t
 
         void maebot_feedback_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const bot_commands_t *msg)
         {
-            if(channel == "MAEBOT_PID_FEEDBACK_RED")
+            if(channel == "MAEBOT_PID_COMMAND_RED")
             {
                 pthread_mutex_lock(&paths_mutexes[RED]);
+                std::cout << "red maebot reached location" << std::endl;
                 reached_location[RED] = true;
                 pthread_cond_signal(&paths_cvs[RED]);
                 pthread_mutex_unlock(&paths_mutexes[RED]);
             }
-            else if(channel == "MAEBOT_PID_FEEDBACK_BLUE")
+            else if(channel == "MAEBOT_PID_COMMAND_BLUE")
             {
                 pthread_mutex_lock(&paths_mutexes[BLUE]);
+                std::cout << "blue maebot reached location" << std::endl;
                 reached_location[BLUE] = true;
                 pthread_cond_signal(&paths_cvs[BLUE]);
                 pthread_mutex_unlock(&paths_mutexes[BLUE]);
             }
-            else if(channel == "MAEBOT_PID_FEEDBACK_GREEN")
+            else if(channel == "MAEBOT_PID_COMMAND_GREEN")
             {
                 pthread_mutex_lock(&paths_mutexes[GREEN]);
+                std::cout << "green maebot reached location" << std::endl;
                 reached_location[GREEN] = true;
                 pthread_cond_signal(&paths_cvs[GREEN]);
                 pthread_mutex_unlock(&paths_mutexes[GREEN]);
@@ -215,6 +222,7 @@ static void* run_thread(void *data)
     while (state->running)
     {
         pthread_mutex_lock(&state->dests_mutexes[*color]);
+        std::cout << "locked dests_mutex before checking dests.empty()" << std::endl;
         while(state->maebot_dests[*color].empty())
         {
             pthread_cond_wait(&state->dests_cvs[*color], &state->dests_mutexes[*color]);
@@ -224,11 +232,14 @@ static void* run_thread(void *data)
 
         // if no path (not calculated yet), create path
         pthread_mutex_lock(&state->paths_mutexes[*color]);
+        std::cout << "locked paths mutex" << std::endl;
         if(state->maebot_paths[*color].empty())
         {
             std::cout << "creating path to first dest" << std::endl;
             pthread_mutex_lock(&state->localization_mutex);
+            std::cout << "locked localization mutex when path empty" << std::endl;
             pthread_mutex_lock(&state->dests_mutexes[*color]);
+            std::cout << "locked dests mutex when path empty" << std::endl;
             
             state->maebot_paths[*color] = state->nav.pathPlan(eecs467::Point<double>{state->maebot_locations[*color].x,
                                                               state->maebot_locations[*color].y},
@@ -240,31 +251,40 @@ static void* run_thread(void *data)
             pthread_mutex_unlock(&state->localization_mutex);
         }
         pthread_mutex_unlock(&state->paths_mutexes[*color]);
+        std::cout << "unlocked mutexes" << std::endl;
 
         // if path, check if reached next point in path
 
         // wait until maebot thinks it has reached it's next point in the path
         pthread_mutex_lock(&state->paths_mutexes[*color]);
+        std::cout << "locked paths mutex before wait till maebot done" << std::endl;
         while(!state->reached_location[*color])
         {
             pthread_cond_wait(&state->paths_cvs[*color], &state->paths_mutexes[*color]);
         }
         pthread_mutex_unlock(&state->paths_mutexes[*color]);
+        std::cout << "maebot reached location" << std::endl;
 
         // check if maebot actually reached location:
         
         pthread_mutex_lock(&state->paths_mutexes[*color]);
+        std::cout << "locked paths mutex before checking if maebot reached location" << std::endl;
         pthread_mutex_lock(&state->localization_mutex);
+        std::cout << "locked localization mutex before checking if maebot reached location" << std::endl;
         if(!state->within_error(*color))
         {
+            std::cout << "republishing destination" << std::endl;
             state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
         }
         else
         {
+            std::cout << "publishing next destination" << std::endl;
             state->maebot_paths[*color].pop_front();
             if(state->maebot_paths[*color].empty())
             {
+                std::cout << "popping dest off deque" << std::endl;
                 pthread_mutex_lock(&state->dests_mutexes[*color]);
+                std::cout << "grabbed dests mutex when path empty" << std::endl;
                 state->maebot_dests[*color].pop_front();
                 pthread_mutex_unlock(&state->dests_mutexes[*color]);
                 pthread_mutex_unlock(&state->localization_mutex);

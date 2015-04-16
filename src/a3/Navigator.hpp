@@ -56,6 +56,7 @@ class Navigator
         std::vector<line> diagram_lines;
 
         double dist(vnode_path *a, vnode_path *b);
+        double pointDist(eecs467::Point<double> a, eecs467::Point<double> b);
         double heuristic(vnode_path *a, vnode_path *b);
         void remove(vnode_path *node, std::vector<vnode_path*>& open_set_vector);
         //void reconstructPath(vnode_path *end_node, std::vector<eecs467::Point<double>>& path);
@@ -67,7 +68,8 @@ class Navigator
         bool isSamePoint(eecs467::Point<double> a, eecs467::Point<double> b);
 
         bool vnodeIsEqual(vnode& a, eecs467::Point<double>& b);
-        void printPath(std::vector<vnode_path>& nodes);
+        void printNodes(std::vector<vnode_path>& nodes);
+        void printPath(std::deque<eecs467::Point<double>>& path);
     public:
         Navigator(std::string filename);
         ~Navigator();

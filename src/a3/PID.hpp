@@ -196,7 +196,7 @@ class PID
             cmd.motor_right_speed = 0.0;
             lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
 
-            lcm->publish("MAEBOT_PID_FEEDBACK_RED", &ret_msg);
+            lcm->publish("MAEBOT_PID_COMMAND_RED", &ret_msg);
         }
 
         void get_path_and_lane(double& path_pos, double& lane_pos, double& path_dest, double& lane_dest)
