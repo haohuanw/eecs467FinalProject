@@ -101,8 +101,8 @@ class state_t
                 /*if(!maebot_paths[RED].empty())
                 {
                     publish_to_maebot(RED, *msg, maebot_paths[RED].front());
-                }
-                */
+                }*/
+                
                 pthread_mutex_unlock(&localization_mutex);
                 pthread_mutex_unlock(&paths_mutexes[RED]);
             }

@@ -28,9 +28,10 @@
 #define START_SPEED 0.20f
 #define MIN_SPEED 0.18f
 #define MAX_SPEED 0.22f
-#define MIN_GAIN 0.0004f
-#define MAX_GAIN 0.0008f
-
+#define MIN_GAIN 0.05f//0.0004f
+#define MAX_GAIN 0.10f//0.0008f
+#define L_MAX 0.05f
+#define L_MIN 0.03f
 struct odo_data
 {
     int32_t left_ticks;
@@ -158,7 +159,7 @@ class PID
 
         void turn_to_dest()
         {
-            std::cout<<"current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
+            std::cout<<"turn_to_dest current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
             maebot_motor_command_t cmd;
             bot_commands_t ret_msg = {0, 0, 0, 0, 0, 0, 1};
 
@@ -219,34 +220,36 @@ class PID
 
         void correct_motor_speeds(maebot_motor_command_t& cmd, double& path_pos, double& lane_pos, double& path_dest, double& lane_dest, double& theta_rob, double& theta_dest)
         {
+            cmd.motor_left_speed = START_SPEED + MAX_GAIN*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 + L_MIN*(lane_pos - lane_dest)/0.15; 
+			cmd.motor_right_speed = START_SPEED - MAX_GAIN*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 - L_MIN*(lane_pos - lane_dest)/0.15 ;
             //std::cout << "theta robot: " << theta_rob << std::endl;
             //std::cout << "theta dest:  " << theta_dest << std::endl;
             // if on left side of lane, move right
-            if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 &&
+            /*if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 &&
                     fabs(eecs467::wrap_to_pi(theta_rob - theta_dest) < M_PI/40))
             {
-                //std::cout << "Far left" << std::endl;
-                if(cmd.motor_left_speed < MAX_SPEED)
-                    cmd.motor_left_speed += MIN_GAIN;
-                else if(cmd.motor_right_speed > MIN_SPEED)
-                    cmd.motor_right_speed -= MIN_GAIN;
-            }
-
-            // if on right side of lane, move left
-            else if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 &&
-                    fabs(eecs467::wrap_to_pi(theta_rob - theta_dest) < M_PI/40))
-            {
-                //std::cout << "Far right" << std::endl;
+                std::cout << "Far right" << std::endl;
                 if(cmd.motor_left_speed > MIN_SPEED)
                     cmd.motor_left_speed -= MIN_GAIN;
                 else if(cmd.motor_right_speed < MAX_SPEED)
                     cmd.motor_right_speed += MIN_GAIN;
             }
 
+            // if on right side of lane, move left
+            else if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 &&
+                    fabs(eecs467::wrap_to_pi(theta_rob - theta_dest) < M_PI/40))
+            {
+                std::cout << "Far left" << std::endl;
+                if(cmd.motor_left_speed < MAX_SPEED)
+                    cmd.motor_left_speed += MIN_GAIN;
+                else if(cmd.motor_right_speed > MIN_SPEED)
+                    cmd.motor_right_speed -= MIN_GAIN;
+            }
+
             // if feering left, move right
             else if(eecs467::wrap_to_pi(theta_rob - theta_dest) > M_PI/40)
             {
-                //std::cout << "veering left" << std::endl;
+                std::cout << "veering left" << std::endl;
                 if(cmd.motor_left_speed < MAX_SPEED)
                     cmd.motor_left_speed += MAX_GAIN;
                 else if(cmd.motor_right_speed > MIN_SPEED)
@@ -256,7 +259,7 @@ class PID
             // if veering right, move left
             else if(eecs467::wrap_to_pi(theta_rob - theta_dest) < -M_PI/40)
             {
-                //std::cout << "veering right" << std::endl;
+                std::cout << "veering right" << std::endl;
                 if(cmd.motor_left_speed > MIN_SPEED)
                     cmd.motor_left_speed -= MAX_GAIN;
                 else if(cmd.motor_right_speed < MAX_SPEED)
@@ -268,19 +271,19 @@ class PID
 
 	    		cmd.motor_left_speed = START_SPEED;
 	    		cmd.motor_right_speed = START_SPEED;
-
+                
 		    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 ){
-                    //std::cout << "straight left" << std::endl;
-		    		cmd.motor_left_speed = START_SPEED + 0.005;
-	    			cmd.motor_right_speed = START_SPEED;
-				}
-				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
-				else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 ) {
-                    //std::cout << "straight right" << std::endl;
+                    std::cout << "straight left" << std::endl;
 		    		cmd.motor_left_speed = START_SPEED;
 	    			cmd.motor_right_speed = START_SPEED + 0.005;
 				}
-	    	}
+				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
+				else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 ) {
+                    std::cout << "straight right" << std::endl;
+		    		cmd.motor_left_speed = START_SPEED + 0.005;
+	    			cmd.motor_right_speed = START_SPEED;
+				}
+	    	}*/
             //std::cout << "updated cmd: " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;
         }
 

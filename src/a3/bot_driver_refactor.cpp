@@ -143,7 +143,7 @@ int main()
     {
         if(!state.pid.at_destination())
         {
-            if(state.pid.theta_error() > M_PI/6)
+            if(fabs(state.pid.theta_error()) > M_PI/6)
             {
                 std::cout << "theta error: " << state.pid.theta_error() << std::endl;
                 std::cout << "turn" << std::endl;
