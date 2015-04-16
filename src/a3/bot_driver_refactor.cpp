@@ -71,6 +71,7 @@ class state_t
             
             if(pid.dest.x_dest != msg->x_dest || pid.dest.y_dest != msg->y_dest)
             {
+                pid.is_first_read = true;
                 pid.dest.x_dest = msg->x_dest;
                 pid.dest.y_dest = msg->y_dest;
 
