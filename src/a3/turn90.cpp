@@ -92,47 +92,6 @@ struct Motion_Class{
 		new_odo = false;
 		first_read = true;
 	}
-
-	bool do_something(){
-		bool ret;
-		pthread_mutex_lock(&comms_m);
-		ret = new_command;
-		comp = read;
-		pthread_mutex_unlock(&comms_m);
-		
-
-		return ret;
-	}
-
-	//LCM handler for reading in maebot commands from the master program
-	void bot_commands_handler(const lcm::ReceiveBuffer* rbuf, const string &channel, const bot_commands_t* msg){
-		pthread_mutex_lock(&comms_m);
-		read.x_rob = msg->x_rob;
-		read.y_rob = msg->y_rob;
-		read.theta_rob = msg->theta_rob;
-
-		read.x_dest = msg->x_dest;
-		read.y_dest = msg->y_dest;
-		// read.theta_dest = msg->theta_dest;
-		if(read.x_dest > read.x_rob){
-			read.theta_dest = 0;
-		}
-		else if(read.x_dest < read.x_rob){
-			read.theta_dest = -M_PI;
-		}
-		else if(read.y_dest > read.y_rob){
-			read.theta_dest = M_PI/2.0;
-		}
-		else{
-			read.theta_dest = -M_PI/2.0;
-		}
-
-		read.turn = msg->turning;
-
-		new_command = true;
-		pthread_mutex_unlock(&comms_m);
-	}
-
 	//LCM handler for reading in odometry data from the maebot itself to have some control
 	//between bot command messages
 
@@ -155,8 +114,7 @@ struct Motion_Class{
 			read.y_rob = sin(eecs467::wrap_to_pi(read.theta_rob + a))*ticks_avg + read.y_rob;
 			read.theta_rob = eecs467::wrap_to_pi(d_theta + read.theta_rob);
 
-			cout << "RED===: ";
-			cout << "x_rob: " << read.x_rob << " y_rob: " << read.y_rob << " theta_rob: " << read.theta_rob << endl;
+			//cout << "x_rob: " << read.x_rob << " y_rob: " << read.y_rob << " theta_rob: " << read.theta_rob << endl;
 
 			
 		}
@@ -174,8 +132,6 @@ struct Motion_Class{
 	//1-angle cutoff
 	//2-average speed
 	//3- different in motors
-
-	//NEW AND IMPROVED TURN 90 FUNCTION PHWOARRRR
 	void turn_90(){
 
 		maebot_motor_command_t msg;
@@ -238,7 +194,6 @@ struct Motion_Class{
 	    //return true;
 	}
 
-
 	//FUNCTION DETERMINES IF WE STILL HAVE SOMEWHERE TO GO
 	bool not_done(double theta_dest, double path_pos, double path_dest){
 
@@ -283,28 +238,22 @@ struct Motion_Class{
 
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
-	    bot_commands_t bot_msg;
-	    bot_commands_t *bot_msg_ptr = &bot_msg; 
+	    //bot_commands_t bot_msg;
+	    //bot_commands_t *bot_msg_ptr = &bot_msg; 
 
 	    double theta_current = theta_in;
 	    double path_pos, lane_pos;
 	    double path_dest, lane_dest;
+	    double lane_error = 0, theta_error = 0;
 
+	    double base =  0.17;
 
-	    double left_speed =  0.17;
-	    double right_speed = 0.163;
+	    const double MAX_GAIN = 0.10;
+	    const double MIN_GAIN = 0.05;
+	    const double L_MAX = 0.03;
+	    const double L_MIN = 0.05;
+	    double left_speed, right_speed;
 
-	    const double MAX_SPEED = 0.19;
-	    const double MIN_SPEED = 0.16;
-	    const double MIN_GAIN = 0.0004;
-	    const double MAX_GAIN = 0.0008;
-
-
-	    pthread_mutex_lock(&comms_m);
-	   	read.x_rob = path_pos;
-	   	read.y_rob = lane_pos;
-		read.theta_rob = theta_current;	    
-		pthread_mutex_unlock(&comms_m);
 
 	    //REMEMBER: x in the robot's frame is the direction of motion, always!
 	    //HOWEVER: x in the world frame is static
@@ -336,15 +285,18 @@ struct Motion_Class{
 
 	    }
 	    //if moving along the negative y axis
-	    else if(theta_dest == -M_PI/2.0){
+	    else{
 	    	path_pos = y_in;
 	    	lane_pos = x_in;
 	    	path_dest = y_dest;
 	    	lane_dest = x_dest;
 	    }
-	    else{}
 
-	    double angle_diff;
+	    pthread_mutex_lock(&comms_m);
+	   	read.x_rob = path_pos;
+	   	read.y_rob = lane_pos;
+		read.theta_rob = theta_current;	    
+		pthread_mutex_unlock(&comms_m);
 
 	    while( not_done(theta_dest, path_pos, path_dest) ){
 
@@ -353,63 +305,58 @@ struct Motion_Class{
 	    	cout <<"lane_position: " << lane_pos << endl;
 	    	//BACKUP P controller works
 
+	    	lane_error += lane_pos - lane_dest;
+	    	theta_error += theta_current - theta_dest;
 
+	    	
 	    	//IF WE'RE ON THE LEFT SIDE OF THE LANE, CORRECT BY MOVING RIGHT
-	    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 && abs(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI) < 5 ){
+	    	/*
+	    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 && abs(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI) < 3 ){
 	    		cout << "far left" << endl;
-	    		if(left_speed < MAX_SPEED)
-	    			left_speed += MIN_GAIN;
-	    		else if(right_speed > MIN_SPEED)
-	    			right_speed -= MIN_GAIN;
+	    		left_speed = base + MIN_GAIN*(lane_pos - lane_dest)/0.15;
+	    	    right_speed = base;
+	    		
 		    	
 			}
 			//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
-			else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 && abs(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI) < 5) {
-
+			else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 && abs(180*eecs467::angle_diff(theta_current,theta_dest)/M_PI) < 3) {
 				cout << "far right" << endl;
-	    		if(left_speed > MIN_SPEED)
-		    		left_speed -= MIN_GAIN;
-		    	else if( right_speed < MAX_SPEED)
-		    		right_speed += MIN_GAIN;
+				left_speed = base;
+	    	    right_speed = base + MIN_GAIN*(lane_pos - lane_dest)/0.15;
+	    		
 		    	
 			}
 			//IF WE'RE VEERING RIGHT, CORRECT BY GOING LEFT
-			else if( (180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI < -5.0) ) {
-					cout << "veering right" << endl;
+			else if( (180*eecs467::angle_diff(theta_current, theta_dest)/M_PI < -5.0) ) {
+				cout << "veering right" << endl;
+				left_speed = base;
+	        	right_speed = base + MAX_GAIN*(180*abs(eecs467::angle_diff(theta_current, theta_dest)/M_PI))/50.0;
 		
-		    		if(left_speed > MIN_SPEED)
-		    			left_speed -=MAX_GAIN;
-		    		else if( right_speed < MAX_SPEED)
-		    			right_speed += MAX_GAIN;
+		  
 		    }
 		    //IF WE"RE VEERING LEFT, CORRECT BY GOING RIGHT
-	    	else if(180*eecs467::wrap_to_pi(theta_current - theta_dest)/M_PI > 5.0 ){
+	    	else if(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI > 5.0 ){
 	    		cout << "veering left" << endl;
-	    		if(left_speed < MAX_SPEED)
-	    			left_speed += MAX_GAIN;
-	    		else if(right_speed > MIN_SPEED)
-	    			right_speed -= MAX_GAIN;
+	    		left_speed = base + MAX_GAIN*(180*abs(eecs467::angle_diff(theta_current, theta_dest)/M_PI))/50.0;
+	    	    right_speed = base;
+	    		
 	    	}
 	    	else{
-
-	    		left_speed = 0.17;
-	    		right_speed = 0.163;
-
-		    	if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 ){
-		    		cout << "straight left" << endl;
-		    			left_speed = 0.175;
-	    				right_speed = 0.165;
-			    	
-				}
-				//IF WE'RE ON THE RIGHT SIDE OF THE LANE, CORRECT BY MOVING LEFT
-				else if( too_far(theta_dest, lane_pos, lane_dest, 0.04) == -1 ) {
-
-					cout << "straight right" << endl;
-		    			left_speed = 0.165;
-	    				right_speed = 0.175;
-			    	
-				}
+	    		left_speed = base;
+	    		right_speed = base;
 	    	}
+			*/
+
+			left_speed = base + MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 + L_MIN*(lane_pos - lane_dest)/0.15; 
+			right_speed = base - MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 - L_MIN*(lane_pos - lane_dest)/0.15 ;
+
+
+
+
+	    	//if(left_speed >= 0.24)
+	    	//	left_speed = 0.22;
+	    	//if(right_speed >= 0.24)
+	    	//	right_speed = 0.22;
 
 	    	msg_ptr->motor_left_speed = left_speed;
 	    	msg_ptr->motor_right_speed = right_speed;
@@ -428,38 +375,24 @@ struct Motion_Class{
 	   
 
 	    //tell world manager we're done
-	    bot_msg_ptr->reach_dest = 1;
-	    lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
+	    //bot_msg_ptr->reach_dest = 1;
+	    //lcm_inst.publish("MAEBOT_PID_FEEDBACK_RED", bot_msg_ptr);
 
 
 	}
 
 };
 
-
-
-int main(int argc, char *argv[]){
-  //eecs467_init (argc, argv);
-
-	//init LCM
+int main(){
 	Motion_Class C;
-	//lcm_inst.subscribe("BOT_COMMANDS", &Motion_Class::bot_commands_handler, &C);
 	lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &Motion_Class::odometry_handler, &C);
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
-	//C.go_straight(0.0, 1.5, 0.0, 0.0, 0.0, 0.0);
+	//while(true){
+	//C.turn_90();
+	C.go_straight(0, 1.5, 0, 0, 0, 0);
+	//}
 
-	while(true){
-		if(C.do_something()){
-			if(C.comp.turn == 1)
-				C.turn_90();
-			else{
-				C.go_straight(C.comp.theta_dest, C.comp.x_dest, C.comp.y_dest, C.comp.theta_rob, C.comp.x_rob, C.comp.y_rob);
-			}
-		}
-		
-	}
 
-	return 0;
 }

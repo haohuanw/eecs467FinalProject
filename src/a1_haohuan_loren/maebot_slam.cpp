@@ -194,7 +194,7 @@ class state_t
                     best_point.x = best.x;
                     best_point.y = best.y;
                     
-                    /*
+                    
 					wall_expansion = 4;
 					while (wall_expansion >= 1)
 					{
@@ -300,12 +300,13 @@ printf("hard right\n");
 printf("motor_cmd (l,r): (%f,%f)\n", drive_cmd.motor_left_speed, drive_cmd.motor_right_speed);
                         lcm.publish("MAEBOT_MOTOR_COMMAND", &drive_cmd);
                     }
-                    //printf("%d %d\n",frontier_path[0].x,frontier_path[0].y);*/
+                    //printf("%d %d\n",frontier_path[0].x,frontier_path[0].y);
                 } 
             }
 	    else{
 	      if(last_draw){
 					printf("DONE\n");
+                    save_map(this);
                     //printf("particle filter process\n");
                     //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
                     maebot_pose_t best = particles.get_best();
