@@ -48,42 +48,50 @@ class state_t
 
         void command_handler(const lcm::ReceiveBuffer *rbuf, const string& channel, const bot_commands_t *msg)
         {
+            std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
+                        <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
             pthread_mutex_lock(&pid.command_mutex);
-
+            
             pid.dest.x_rob = msg->x_rob;
             pid.dest.y_rob = msg->y_rob;
             pid.dest.theta_rob = msg->theta_rob;
 
-            pid.dest.x_dest = msg->x_dest;
-            pid.dest.y_dest = msg->y_dest;
-
             if(pid.dest.x_rob == pid.dest.x_dest && pid.dest.y_rob == pid.dest.y_dest)
             {
+                std::cout << "received stop command" << std::endl;
                 pid.stop_command = true;
+                return;
             }
             else
             {
                 pid.stop_command = false;
                 pthread_cond_signal(&pid.command_cv);
             }
-            double dx = fabs(pid.dest.x_dest - pid.dest.x_rob);
-            double dy = fabs(pid.dest.y_dest - pid.dest.y_rob);
-            if((pid.dest.x_dest > pid.dest.x_rob) && (dy<dx)) 
-            { 
-                pid.dest.theta_dest = 0; 
-            }
-            else if((pid.dest.x_dest < pid.dest.x_rob) && (dy<dx)) 
-            { 
-                pid.dest.theta_dest = M_PI; 
-            }
-            else if((pid.dest.y_dest > pid.dest.y_rob) && (dx<dy)) 
-            { 
-                pid.dest.theta_dest = M_PI/2.0; 
-            }
-            else if((pid.dest.y_dest < pid.dest.y_rob) && (dx<dy)){ 
-                pid.dest.theta_dest = -M_PI/2.0; 
-            }
 
+            
+            if(pid.dest.x_dest != msg->x_dest || pid.dest.y_dest != msg->y_dest)
+            {
+                pid.dest.x_dest = msg->x_dest;
+                pid.dest.y_dest = msg->y_dest;
+
+                double dx = fabs(pid.dest.x_dest - pid.dest.x_rob);
+                double dy = fabs(pid.dest.y_dest - pid.dest.y_rob);
+                if((pid.dest.x_dest > pid.dest.x_rob) && (dy<dx)) 
+                { 
+                    pid.dest.theta_dest = 0; 
+                }
+                else if((pid.dest.x_dest < pid.dest.x_rob) && (dy<dx)) 
+                { 
+                    pid.dest.theta_dest = M_PI; 
+                }
+                else if((pid.dest.y_dest > pid.dest.y_rob) && (dx<dy)) 
+                { 
+                    pid.dest.theta_dest = M_PI/2.0; 
+                }
+                else if((pid.dest.y_dest < pid.dest.y_rob) && (dx<dy)){ 
+                    pid.dest.theta_dest = -M_PI/2.0; 
+                }
+            }
             pthread_mutex_unlock(&pid.command_mutex);
         }
 

@@ -25,11 +25,13 @@
 #include "math/angle_functions.hpp"
 #include "math.h"
 
-#define START_SPEED 0.20f
+#define START_SPEED 0.16f
 #define MIN_SPEED 0.18f
 #define MAX_SPEED 0.22f
-#define MIN_GAIN 0.0004f
-#define MAX_GAIN 0.0008f
+#define MIN_GAIN 0.05f
+#define MAX_GAIN 0.1f
+#define L_MAX 0.03f
+#define L_MIN 0.05f
 
 struct odo_data
 {
@@ -219,10 +221,13 @@ class PID
 
         void correct_motor_speeds(maebot_motor_command_t& cmd, double& path_pos, double& lane_pos, double& path_dest, double& lane_dest, double& theta_rob, double& theta_dest)
         {
+            cmd.motor_left_speed = START_SPEED + MAX_GAIN*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 + L_MIN*(lane_pos - lane_dest)/0.15; 
+			cmd.motor_right_speed = START_SPEED - MAX_GAIN*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 - L_MIN*(lane_pos - lane_dest)/0.15 ;
+
             //std::cout << "theta robot: " << theta_rob << std::endl;
             //std::cout << "theta dest:  " << theta_dest << std::endl;
             // if on left side of lane, move right
-            if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 &&
+            /*if(too_far(theta_dest, lane_pos, lane_dest, 0.04) == 1 &&
                     fabs(eecs467::wrap_to_pi(theta_rob - theta_dest) < M_PI/40))
             {
                 //std::cout << "Far left" << std::endl;
@@ -280,7 +285,7 @@ class PID
 		    		cmd.motor_left_speed = START_SPEED;
 	    			cmd.motor_right_speed = START_SPEED + 0.005;
 				}
-	    	}
+	    	}*/
             //std::cout << "updated cmd: " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;
         }
 

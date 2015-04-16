@@ -99,7 +99,7 @@ class state_t{
 
             maebot_list[RED] = m;
             occupancy_grid = eecs467::OccupancyGrid(5.0,5.0,0.05);
-            read_map("../ground_truth/test_map.txt");
+            read_map("../ground_truth/a_map.txt");
             pthread_mutex_init(&mutex,NULL);
             pthread_mutex_init(&data_mutex,NULL);
             lcm.subscribe("MAEBOT_DEST",&state_t::maebot_dest_handler,this);

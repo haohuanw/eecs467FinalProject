@@ -73,9 +73,9 @@ class state_t
             lcm.subscribe("MAEBOT_LOCALIZATION_RED",   &state_t::maebot_localization_handler, this);
             lcm.subscribe("MAEBOT_LOCALIZATION_BLUE",  &state_t::maebot_localization_handler, this);
             lcm.subscribe("MAEBOT_LOCALIZATION_GREEN", &state_t::maebot_localization_handler, this);
-            lcm.subscribe("MAEBOT_PID_COMMAND_RED", &state_t::maebot_feedback_handler, this);
-            lcm.subscribe("MAEBOT_PID_COMMAND_BLUE", &state_t::maebot_feedback_handler, this);
-            lcm.subscribe("MAEBOT_PID_COMMAND_GREEN", &state_t::maebot_feedback_handler, this);
+            lcm.subscribe("MAEBOT_PID_FEEDBACK_RED", &state_t::maebot_feedback_handler, this);
+            lcm.subscribe("MAEBOT_PID_FEEDBACK_BLUE", &state_t::maebot_feedback_handler, this);
+            lcm.subscribe("MAEBOT_PID_FEEDBACK_GREEN", &state_t::maebot_feedback_handler, this);
         }
 
         ~state_t()
@@ -92,26 +92,53 @@ class state_t
 
         void maebot_localization_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const maebot_pose_t *msg)
         {
-            pthread_mutex_lock(&localization_mutex);
             if(channel == "MAEBOT_LOCALIZATION_RED")
             {
-                std::cout << "updating localization" << std::endl;
+                pthread_mutex_lock(&paths_mutexes[RED]);
+                pthread_mutex_lock(&localization_mutex);
+                
                 maebot_locations[RED] = *msg;
+                /*if(!maebot_paths[RED].empty())
+                {
+                    publish_to_maebot(RED, *msg, maebot_paths[RED].front());
+                }
+                */
+                pthread_mutex_unlock(&localization_mutex);
+                pthread_mutex_unlock(&paths_mutexes[RED]);
             }
             else if(channel == "MAEBOT_LOCALIZATION_BLUE")
             {
+                pthread_mutex_lock(&paths_mutexes[BLUE]);
+                pthread_mutex_lock(&localization_mutex);
+                
                 maebot_locations[BLUE] = *msg;
+                if(!maebot_paths[BLUE].empty())
+                {
+                    publish_to_maebot(BLUE, *msg, maebot_paths[BLUE].front());
+                }
+                
+                pthread_mutex_unlock(&localization_mutex);
+                pthread_mutex_unlock(&paths_mutexes[BLUE]);
             }
             else if(channel == "MAEBOT_LOCALIZATION_GREEN")
             {
+                pthread_mutex_lock(&paths_mutexes[GREEN]);
+                pthread_mutex_lock(&localization_mutex);
+                
                 maebot_locations[GREEN] = *msg;
+                if(!maebot_paths[GREEN].empty())
+                {
+                    publish_to_maebot(GREEN, *msg, maebot_paths[GREEN].front());
+                }
+                
+                pthread_mutex_unlock(&localization_mutex);
+                pthread_mutex_unlock(&paths_mutexes[GREEN]);
             }
             else
             {
                 // error
                 std::cout << "tried to get localization data from wrong channel: " << channel << std::endl;
             }
-            pthread_mutex_unlock(&localization_mutex);
         }
 
         void dest_list_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg){
@@ -133,7 +160,7 @@ class state_t
 
         void maebot_feedback_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const bot_commands_t *msg)
         {
-            if(channel == "MAEBOT_PID_COMMAND_RED")
+            if(channel == "MAEBOT_PID_FEEDBACK_RED")
             {
                 pthread_mutex_lock(&paths_mutexes[RED]);
                 std::cout << "red maebot reached location" << std::endl;
@@ -141,7 +168,7 @@ class state_t
                 pthread_cond_signal(&paths_cvs[RED]);
                 pthread_mutex_unlock(&paths_mutexes[RED]);
             }
-            else if(channel == "MAEBOT_PID_COMMAND_BLUE")
+            else if(channel == "MAEBOT_PID_FEEDBACK_BLUE")
             {
                 pthread_mutex_lock(&paths_mutexes[BLUE]);
                 std::cout << "blue maebot reached location" << std::endl;
@@ -149,7 +176,7 @@ class state_t
                 pthread_cond_signal(&paths_cvs[BLUE]);
                 pthread_mutex_unlock(&paths_mutexes[BLUE]);
             }
-            else if(channel == "MAEBOT_PID_COMMAND_GREEN")
+            else if(channel == "MAEBOT_PID_FEEDBACK_GREEN")
             {
                 pthread_mutex_lock(&paths_mutexes[GREEN]);
                 std::cout << "green maebot reached location" << std::endl;
@@ -244,6 +271,13 @@ static void* run_thread(void *data)
             state->maebot_paths[*color] = state->nav.pathPlan(eecs467::Point<double>{state->maebot_locations[*color].x,
                                                               state->maebot_locations[*color].y},
                                                               state->maebot_dests[*color].front());
+            std::cout << "Calculated path: " << std::endl;
+            for(uint i = 0; i < state->maebot_paths[*color].size(); i++)
+            {
+                std::cout << "(" << state->maebot_paths[*color][i].x << ", "
+                          << state->maebot_paths[*color][i].y << ") -> ";
+            }
+            std::cout << std::endl;
             state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
             state->publish_to_ui(*color);
             

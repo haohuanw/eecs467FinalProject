@@ -70,8 +70,8 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
         {
             std::deque<eecs467::Point<double>> path;
             reconstructPath(current, path, nodes);
-            path.pop_back();
             path.push_back(end_pair.second);
+            printPath(path);
             return path;
         }
         open_set.pop();
@@ -237,7 +237,6 @@ void Navigator::reconstructPath(vnode_path *end_node, std::deque<eecs467::Point<
     next_coord.y = current->y;
     path.push_back(next_coord);
     reverse(path);
-    printPath(path);
 }
 
 void Navigator::printNodes(std::vector<vnode_path>& nodes)

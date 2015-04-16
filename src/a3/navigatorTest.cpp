@@ -22,14 +22,9 @@ int main()
     Navigator n("../ground_truth/vmap.txt");
     n.printDiagram();
 
-    eecs467::Point<double> a = {-.6, -.75};
-    eecs467::Point<double> b = {-.5, 1.125};
+    eecs467::Point<double> a = {-.41945, -.817545};
+    eecs467::Point<double> b = {-.5, 0.886755};
     std::deque<eecs467::Point<double>> path = n.pathPlan(a, b);
-    print(path);
-
-    b.y = -.73;
-    b.x = -.5;
-    path = n.pathPlan(a, b);
     print(path);
 
     /*b.y = 0.25;
