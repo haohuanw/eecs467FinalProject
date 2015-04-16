@@ -34,8 +34,14 @@ BIN_IMAGE_TO_WORLD_COORD = $(BIN_PATH)/image_to_world_coord
 BIN_MANUAL_GEN_TRANS = $(BIN_PATH)/manual_gen_trans
 BIN_MAEBOT_SLAM = $(BIN_PATH)/maebot_slam
 BIN_WORLD_MANAGER = $(BIN_PATH)/world_manager
+BIN_MINI_WORLD_MANAGER = $(BIN_PATH)/mini_world_manager
+BIN_MAEBOT_LOCALIZATION = $(BIN_PATH)/maebot_localization
 
+<<<<<<< HEAD
 ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_BOT_DRIVER) $(BIN_TURN90) $(BIN_NAVIGATOR_TEST) $(BIN_MANUAL_GEN_TRANS) $(BIN_MAEBOT_SLAM) $(BIN_WORLD_MANAGER)
+=======
+ALL = $(LIB_A3) $(BIN_MASK) $(BIN_COLOR_PICKER) $(BIN_BLOB_DETECTOR) $(BIN_IMAGE_TO_WORLD_COORD) $(BIN_UI) $(BIN_BOT_DRIVER) $(BIN_NAVIGATOR_TEST) $(BIN_MANUAL_GEN_TRANS) $(BIN_WORLD_MANAGER) $(BIN_MINI_WORLD_MANAGER) $(BIN_MAEBOT_LOCALIZATION)
+>>>>>>> 153fa3eb19e3abdb6100d071e4d4e30dd8825b8a
 
 all: $(ALL)
 
@@ -67,7 +73,7 @@ $(BIN_UI): ui.o $(LIB_A3) $(LIB_MAPPING) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -g -o $@ $^ $(LDFLAGS)
 
-$(BIN_BOT_DRIVER): bot_driver.o $(LIB_A3) $(LIBDEPS)
+$(BIN_BOT_DRIVER): bot_driver_refactor.o $(LIB_A3) $(LIBDEPS)
 	@echo "\t$@"
 	@$(CXX) -o $@ $^ $(LDFLAGS)
 
@@ -85,7 +91,15 @@ $(BIN_MAEBOT_SLAM): maebot_slam.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
 
 $(BIN_WORLD_MANAGER): world_manager.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
 	@echo "\t$@"
-	@$(CXX) -o $@ $^ $(LDFLAGS)
+	@$(CXX) -g -o $@ $^ $(LDFLAGS)
+
+$(BIN_MINI_WORLD_MANAGER): mini_world_manager.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
+	@echo "\t$@"
+	@$(CXX) -g -o $@ $^ $(LDFLAGS)
+
+$(BIN_MAEBOT_LOCALIZATION): maebot_localization.o $(LIBDEPS) $(LIB_A3) $(LIB_MAPPING)
+	@echo "\t$@"
+	@$(CXX) -g -o $@ $^ $(LDFLAGS)
 
 clean:
 	@rm -f *.o *~ *.a

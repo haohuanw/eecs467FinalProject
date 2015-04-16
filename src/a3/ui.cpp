@@ -29,6 +29,8 @@
 #include "imagesource/image_convert.h"
 #include "imagesource/image_u32.h"
 #include "imagesource/image_util.h"
+//lcmtypes
+#include "lcmtypes/maebot_pose_t.hpp"
 //a3
 #include "vx_state_t.hpp"
 #include "mapping/occupancy_grid.hpp"
@@ -125,6 +127,27 @@ static void* render_loop(void *data){
                 }
                 if(!pos.empty()){
                     state->maebot_list[i].curr_pos = state->calibration.image_to_world_translate(eecs467::Point<double>{(double)((pos[0]%im->width)-im->width/2), (double)((im->height-pos[0]/im->width)-im->height/2)});
+                    if(i == RED){
+                        maebot_pose_t msg;
+                        msg.x = state->maebot_list[i].curr_pos.x;
+                        msg.y = state->maebot_list[i].curr_pos.y;
+                        msg.theta = 0.0;
+                        state->lcm.publish("MAEBOT_IMAGE_POS_RED",&msg);
+                    }
+                    else if(i == BLUE){
+                        maebot_pose_t msg;
+                        msg.x = state->maebot_list[i].curr_pos.x;
+                        msg.y = state->maebot_list[i].curr_pos.y;
+                        msg.theta = 0.0;
+                        state->lcm.publish("MAEBOT_IMAGE_POS_BLUE",&msg);
+                    }
+                    else if(i == GREEN){
+                        maebot_pose_t msg;
+                        msg.x = state->maebot_list[i].curr_pos.x;
+                        msg.y = state->maebot_list[i].curr_pos.y;
+                        msg.theta = 0.0;
+                        state->lcm.publish("MAEBOT_IMAGE_POS_GREEN",&msg);
+                    }
                 }
             }
             // draw maebot position on each window
@@ -230,6 +253,19 @@ static void* render_loop(void *data){
                 }
                 vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
                 vx_buffer_add_back(cam_buf, vxo_points(verts, npoints, vxo_points_style(vx_green, 4.0f)));
+            }
+            
+            //display the best particle in the image
+            if(state->maebot_list[state->maebot_curr_selected].particle_pos.x != DBL_MAX 
+                    && state->maebot_list[state->maebot_curr_selected].particle_pos.y != DBL_MAX){
+                int npoints = 1;
+                float points[3];
+                eecs467::Point<double> particle_pos_im_coord = state->calibration.world_to_image_translate(state->maebot_list[state->maebot_curr_selected].particle_pos);
+                points[0] = particle_pos_im_coord.x;
+                points[1] = particle_pos_im_coord.y;
+                points[2] = 0;
+                vx_resc_t *verts = vx_resc_copyf(points, npoints*3);
+                vx_buffer_add_back(cam_buf, vxo_points(verts, npoints, vxo_points_style(vx_red, 4.0f)));
             }
 
             //display the waypoints in the occupancy grid
@@ -351,7 +387,7 @@ int main(int argc, char ** argv){
         exit(1);
     }
     printf("find camera\n");
-    zarray_get(urls,0,&state.camera_url);
+    zarray_get(urls,1,&state.camera_url);
     printf("get camera address\n");
 
     draw(&state);

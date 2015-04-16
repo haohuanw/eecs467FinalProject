@@ -27,7 +27,7 @@
 #include <math/gsl_util_rand.h>
 
 static const char* MAP_TO_READ;
-
+std::string color;
 
 /*
 ******TO DO LIST *******
@@ -131,6 +131,15 @@ class state_t
                 particles.update();
                 //printf("best particle: %f %f\n",particles.get_best().x,particles.get_best().y);
                 maebot_pose_t best = particles.get_best();
+
+                maebot_pose_t pose_msg;
+                pose_msg = best;
+
+                std::string msg_str = "MAEBOT_LOCALIZATION_";
+                msg_str.append(color);
+
+                this->lcm.publish(msg_str, &pose_msg);
+                
                 our_path.push_back(best);
             }  
 
@@ -244,10 +253,12 @@ class state_t
 
 int main(int argc, char ** argv)
 {
-    MAP_TO_READ = argv[1];
-    printf("%s",MAP_TO_READ);
+    // MAP_TO_READ = argv[1];
+    // printf("%s",MAP_TO_READ);
+    color = argv[1];
     state_t state;
     state.init_thread();
+
     //comment below disable the vx
     //state.draw(&state,state.world);
     gdk_threads_init();
