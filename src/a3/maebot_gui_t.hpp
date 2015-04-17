@@ -4,7 +4,7 @@
 #include "math/point.hpp"
 #include "hsv.hpp"
 
-#define NUM_MAEBOT 1
+#define NUM_MAEBOT 3
 
 enum maebot_color {RED,BLUE,GREEN,NONE};
 

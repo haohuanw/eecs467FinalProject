@@ -74,7 +74,12 @@ class state_t{
             vxapp.display_finished = display_finished;
             layers = zhash_create(sizeof(vx_display_t*), sizeof(vx_layer_t*), zhash_ptr_hash, zhash_ptr_equals);
             pg = pg_create();
-            pg_add_buttons(pg,"red maebot","select red maebot","deselect maebot","deselect maebot","confirm route","publish path","delete waypoint","delete latest path",NULL);
+            pg_add_buttons(pg,"red maebot","select red maebot",
+                              "blue maebot","select blue maebot",
+                              "green maebot","select green maebot",
+                              "deselect maebot","deselect maebot",
+                              "confirm route","publish path",
+                              "delete waypoint","delete latest path",NULL);
             my_listener = (parameter_listener_t*) calloc (1, sizeof(*my_listener));
             my_listener->impl = this;
             my_listener->param_changed = my_param_changed;
@@ -90,20 +95,41 @@ class state_t{
             maebot_curr_selected = NONE;
             maebot_list.resize(NUM_MAEBOT);
 
-            maebot_gui_t m;
-            m.color = RED;
-            m.curr_pos = {DBL_MAX,DBL_MAX};
-            m.curr_dest = {DBL_MAX,DBL_MAX};
-            m.particle_pos = {DBL_MAX,DBL_MAX};
-            m.hsv_range.read_hsv_from_file("../calibration/blue_maebot_hsv_range.txt");
+            maebot_gui_t r;
+            r.color = RED;
+            r.curr_pos = {DBL_MAX,DBL_MAX};
+            r.curr_dest = {DBL_MAX,DBL_MAX};
+            r.particle_pos = {DBL_MAX,DBL_MAX};
+            r.hsv_range.read_hsv_from_file("../calibration/red_maebot_hsv_range.txt");
+            r.disp_color = 0xff0000ff; 
 
-            maebot_list[RED] = m;
+            maebot_gui_t b;
+            b.color = BLUE;
+            b.curr_pos = {DBL_MAX,DBL_MAX};
+            b.curr_dest = {DBL_MAX,DBL_MAX};
+            b.particle_pos = {DBL_MAX,DBL_MAX};
+            b.hsv_range.read_hsv_from_file("../calibration/blue_maebot_hsv_range.txt");
+            b.disp_color = 0xffff0000;
+
+            maebot_gui_t g;
+            g.color = GREEN;
+            g.curr_pos = {DBL_MAX,DBL_MAX};
+            g.curr_dest = {DBL_MAX,DBL_MAX};
+            g.particle_pos = {DBL_MAX,DBL_MAX};
+            g.hsv_range.read_hsv_from_file("../calibration/green_maebot_hsv_range.txt");
+            g.disp_color = 0xff00ff00;
+
+            maebot_list[RED] = r;
+            maebot_list[BLUE] = b;
+            maebot_list[GREEN] = g;
             occupancy_grid = eecs467::OccupancyGrid(5.0,5.0,0.05);
             read_map("../ground_truth/a_map.txt");
             pthread_mutex_init(&mutex,NULL);
             pthread_mutex_init(&data_mutex,NULL);
             lcm.subscribe("MAEBOT_DEST",&state_t::maebot_dest_handler,this);
             lcm.subscribe("MAEBOT_LOCALIZATION_RED",&state_t::maebot_best_particle_handler,this);
+            lcm.subscribe("MAEBOT_LOCALIZATION_BLUE",&state_t::maebot_best_particle_handler,this);
+            lcm.subscribe("MAEBOT_LOCALIZATION_GREEN",&state_t::maebot_best_particle_handler,this);
         }
 
         ~state_t(){
@@ -118,7 +144,6 @@ class state_t{
             if(channel == "MAEBOT_LOCALIZATION_RED"){
                maebot_list[RED].particle_pos.x = msg->x;
                maebot_list[RED].particle_pos.y = msg->y; 
-               std::cout<<"receive best particle"<<msg->x<<" "<<msg->y<<std::endl;
             }
             if(channel == "MAEBOT_LOCALIZATION_BLUE"){
                maebot_list[BLUE].particle_pos.x = msg->x;
@@ -155,6 +180,14 @@ class state_t{
                 state->maebot_curr_selected = RED;
                 printf ("red\n");
             }
+            else if (0==strcmp ("blue maebot", name)){
+                state->maebot_curr_selected = BLUE;
+                printf ("blue\n");
+            }
+            else if (0==strcmp ("green maebot", name)){
+                state->maebot_curr_selected = GREEN;
+                printf ("green\n");
+            }
             else if (0==strcmp ("deselect maebot",name)){
                 state->maebot_curr_selected = NONE;
                 printf("deselect maebot\n");
@@ -163,7 +196,6 @@ class state_t{
                 if(state->maebot_curr_selected != NONE && !state->maebot_list[state->maebot_curr_selected].waypoints.empty()){
                     //state->maebot_list[state->maebot_curr_selected].curr_dest = state->maebot_list[state->maebot_curr_selected].waypoints.front();
                     //state->maebot_list[state->maebot_curr_selected].waypoints.pop_front();
-                    // TODO: publish lcm message
                     ui_dest_list_t list_from_ui;
                     list_from_ui.color = state->maebot_curr_selected;
                     list_from_ui.num_way_points = state->maebot_list[state->maebot_curr_selected].waypoints.size();

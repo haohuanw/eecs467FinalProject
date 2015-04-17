@@ -112,10 +112,10 @@ static void* render_loop(void *data){
                     eecs467::Point<double> curr_pos_im_coord = state->calibration.world_to_image_translate(state->maebot_list[i].curr_pos);
                     curr_pos_im_coord.x = im->width/2+curr_pos_im_coord.x;
                     curr_pos_im_coord.y = im->height - (im->height/2+curr_pos_im_coord.y);
-                    pos = state->im_processor.blob_detection(im, curr_pos_im_coord.x - 200.0,
-                            curr_pos_im_coord.x + 200.0,
-                            curr_pos_im_coord.y - 200.0,
-                            curr_pos_im_coord.y + 200.0,
+                    pos = state->im_processor.blob_detection(im, curr_pos_im_coord.x - 50.0,
+                            curr_pos_im_coord.x + 50.0,
+                            curr_pos_im_coord.y - 50.0,
+                            curr_pos_im_coord.y + 50.0,
                             state->maebot_list[i].hsv_range);
                     //std::cout<<"adpative way"<<std::endl;
                 }
@@ -221,6 +221,16 @@ static void* render_loop(void *data){
             if(state->maebot_curr_selected == RED){
                 // display maebot text
                 vx_object_t *vm = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,"<<center,#ff0000,serif>>RED");
+                vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-580,-30),vxo_mat_scale(0.8),vm)));
+            } 
+            else if(state->maebot_curr_selected == BLUE){
+                // display maebot text
+                vx_object_t *vm = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,"<<center,#0000ff,serif>>BLUE");
+                vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-580,-30),vxo_mat_scale(0.8),vm)));
+            } 
+            else if(state->maebot_curr_selected == GREEN){
+                // display maebot text
+                vx_object_t *vm = vxo_text_create(VXO_TEXT_ANCHOR_CENTER,"<<center,#00ff00,serif>>GREEN");
                 vx_buffer_add_back(control_buf, vxo_pix_coords(VX_ORIGIN_CENTER,vxo_chain(vxo_mat_translate2(-580,-30),vxo_mat_scale(0.8),vm)));
             } 
             uint waypoints_size = state->maebot_list[state->maebot_curr_selected].waypoints.size();

@@ -342,8 +342,8 @@ int main(int argc, char **argv)
 
     // Spin up thread(s)
     pthread_create(&state->run_thread_red, NULL, run_thread, (void*)new maebot_color(RED));
-    //pthread_create(&state->run_thread_blue, NULL, run_thread, (void*)new maebot_color(BLUE));
-    //pthread_create(&state->run_thread_green, NULL, run_thread, (void*)new maebot_color(GREEN));
+    pthread_create(&state->run_thread_blue, NULL, run_thread, (void*)new maebot_color(BLUE));
+    pthread_create(&state->run_thread_green, NULL, run_thread, (void*)new maebot_color(GREEN));
 
     // Loop forever
     while(state->lcm.handle() == 0);
