@@ -231,8 +231,8 @@ struct Motion_Class{
 			if(angle_diff < 0.9*angle_diff_dest ){
 
 				usleep(5000);
-				msg.motor_left_speed =  -speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest))- 0.11;
-				msg.motor_right_speed = speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest)) + 0.11;
+				msg.motor_left_speed =  -0.8*speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest))- 0.13;
+				msg.motor_right_speed = 0.8*speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest)) + 0.13;
 				lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
 				
 
@@ -371,7 +371,7 @@ struct Motion_Class{
 
 			else if(  abs(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI) > 4.0 ){
 				MAX_GAIN = 0.1;
-				L_MIN = 0.05;
+				L_MIN = 0.04;
 				cout <<"too wide" << endl; 
 
 			}
