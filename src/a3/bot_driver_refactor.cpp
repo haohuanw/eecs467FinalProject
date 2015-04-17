@@ -32,17 +32,22 @@
 #include "PID.hpp"
 
 using namespace std;
+
 class state_t
 {
     public:
         lcm::LCM lcm_inst;
         PID pid;
         pthread_t lcm_thread;
+        double deltax;
+        double deltay;
 
         state_t() : pid(&lcm_inst)
         {
             lcm_inst.subscribe("MAEBOT_PID_COMMAND_RED", &state_t::command_handler, this);
             lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odometry_handler, this);
+            deltax = 0;
+            deltay = 0;
         }
         ~state_t() {}
 
@@ -52,9 +57,23 @@ class state_t
                         <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
             pthread_mutex_lock(&pid.command_mutex);
             
-            pid.dest.x_rob = msg->x_rob;
-            pid.dest.y_rob = msg->y_rob;
-            pid.dest.theta_rob = msg->theta_rob;
+            //if same dest, error correction for time lag
+            if(pid.dest.x_dest == msg->x_dest && pid.dest.y_dest == msg->y_dest){
+                pid.dest.x_rob = msg->x_rob + deltax;
+                pid.dest.y_rob = msg->y_rob + deltay;
+                pid.dest.theta_rob = msg->theta_rob;
+                deltax = 0;
+                deltay = 0;
+            }
+            //diff dest, no error correction
+            else{
+                pid.dest.x_rob = msg->x_rob;
+                pid.dest.y_rob = msg->y_rob;
+                pid.dest.theta_rob = msg->theta_rob;
+                deltax = 0;
+                deltay = 0;
+            }
+
 
             if(pid.dest.x_rob == pid.dest.x_dest && pid.dest.y_rob == pid.dest.y_dest)
             {
@@ -113,11 +132,19 @@ class state_t
             double d_theta = eecs467::wrap_to_pi(double(d_R - d_L)/0.08);
             double a = eecs467::wrap_to_pi(d_theta/2.0);
             pthread_mutex_lock(&pid.command_mutex);
+
+
+            deltax += cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
+            deltay += sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
+
             pid.dest.x_rob = cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.x_rob;
             pid.dest.y_rob = sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.y_rob;
             pid.dest.theta_rob = eecs467::wrap_to_pi(d_theta + pid.dest.theta_rob);
             pid.odometry.left_ticks = msg->encoder_left_ticks;
             pid.odometry.right_ticks = msg->encoder_right_ticks;
+
+
+            
             /*cout << "x_rob: " << pid.dest.x_rob 
                  << " y_rob: " << pid.dest.y_rob 
                  << " theta_rob: " << pid.dest.theta_rob << endl;*/
