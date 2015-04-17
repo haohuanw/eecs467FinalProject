@@ -105,9 +105,10 @@ class state_t
             image_buf = nullptr;
 
             std::string init_str = "MAEBOT_IMAGE_POS_";
+
             init_str.append(color);
             lcm.subscribe(init_str, &state_t::init_handler, this);
-
+            std::cout<<"subscribe to"<<init_str<<std::endl;
             pose_fp = fopen("pose_data.txt","w");
             odo_fp = fopen("odo_data.txt","w");
             error_fp = fopen("error_data.txt","w");
@@ -137,9 +138,14 @@ class state_t
                 pthread_mutex_lock(&data_mutex);
 
                 particles = particle_data(1000, *msg, &map.grid);
-                lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
-                lcm.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odo_handler, this);
-                lcm.subscribe("MAEBOT_LASER_SCAN", &state_t::laser_scan_handler, this);
+                //lcm.subscribe("MAEBOT_POSE", &state_t::pose_handler, this);
+                std::string motor_feedback_channel = "MAEBOT_MOTOR_FEEDBACK_";
+                motor_feedback_channel.append(color);
+                std::string laser_scan_channel = "MAEBOT_LASER_SCAN_";
+                laser_scan_channel.append(color);
+                lcm.subscribe(motor_feedback_channel, &state_t::odo_handler, this);
+                lcm.subscribe(laser_scan_channel, &state_t::laser_scan_handler, this);
+                std::cout<<"subscribe to:"<<motor_feedback_channel<<","<<laser_scan_channel<<std::endl;
                 init = 0;
                 std::string msg_str = "MAEBOT_LOCALIZATION_";
                 msg_str.append(color);

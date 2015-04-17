@@ -65,6 +65,7 @@ class Navigator
         std::pair<eecs467::Point<double>, eecs467::Point<double>> findClosestEnd(eecs467::Point<double> p);
         bool isSamePoint(eecs467::Point<double> a, eecs467::Point<double> b);
         bool isNode(eecs467::Point<double> p);
+        bool nodeWithinError(eecs467::Point<double>& p, eecs467::Point<double>& closeNode);
 
         bool vnodeIsEqual(vnode& a, eecs467::Point<double>& b);
         void printNodes(std::vector<vnode_path>& nodes);

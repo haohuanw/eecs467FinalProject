@@ -29,11 +29,11 @@ int main(){
     bot_commands_t cmd;
     cmd.x_rob = -0.3;
     cmd.y_rob = 0.0;
-    cmd.theta_rob = -M_PI/2;
+    cmd.theta_rob = 0.0;
     cmd.x_dest = 0.5;
     cmd.y_dest = 0.0;
-    lcm.publish("MAEBOT_PID_COMMAND_RED",&cmd);
-    std::cout<<"publish to the MAEBOT_PID_COMMAND_RED"<<std::endl;
+    lcm.publish("MAEBOT_PID_COMMAND_GREEN",&cmd);
+    std::cout<<"publish to the MAEBOT_PID_COMMAND_BLUE"<<std::endl;
     /*usleep(2000000);
     cmd.x_rob = 0.0;
     cmd.y_rob = 0.0;

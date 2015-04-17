@@ -123,9 +123,26 @@ bool Navigator::isNode(eecs467::Point<double> p)
     return false;
 }
 
+bool Navigator::nodeWithinError(eecs467::Point<double>& p, eecs467::Point<double>& closeNode)
+{
+    for(uint i = 0; i < diagram.size(); i++)
+    {
+        if(fabs(diagram[i].x - p.x) < 0.1 && fabs(diagram[i].y - p.y) < 0.1)
+        {
+            closeNode.x = diagram[i].x;
+            closeNode.y = diagram[i].y;
+            return true;
+        }
+    }
+    return false;
+}
+
 eecs467::Point<double> Navigator::findClosestStart(eecs467::Point<double> p)
 {
     if(isNode(p)) return p;
+    //eecs467::Point<double> closeNode;
+    //bool closeNodeWithinError = nodeWithinError(p, closeNode);
+    //if(closeNodeWithinError) return closeNode;
     std::pair<int, eecs467::Point<double>> retval = findClosestLine(p);
     //std::cout << "intersect: " << retval.second.x << ", " << retval.second.y << std::endl;
     if(isSamePoint(diagram_lines[retval.first].start, p))

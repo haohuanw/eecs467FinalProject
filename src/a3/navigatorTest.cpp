@@ -107,6 +107,13 @@ int main()
     print(path);
     // (0.75,-0.25)->(0.75,0.125)->(0.5,0.125)->(-0.375,0.125)->(-0.5,0.125)->(-0.75,0.125)0>(-0.75,-1)
 
+    a.x = -0.6;
+    a.y = 1.2;
+    b.x = .5;
+    b.y = 1.125;
+    path = n.pathPlan(a, b);
+    print(path);
+
     /*a.x = 0;
     a.y = 1.35;
     std::pair<int, eecs467::Point<double>> retval;

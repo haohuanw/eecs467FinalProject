@@ -78,6 +78,66 @@ struct move_data{
 
 };
 
+//=================OTHER FUNCTIONS I DONT WANT TO BE A PART OF THE CLASS 
+//FUNCTION DETERMINES IF WE STILL HAVE SOMEWHERE TO GO
+bool not_done(double theta_dest, double path_pos, double path_dest){
+
+	//if moving along positive x,y
+	if(theta_dest == 0 || theta_dest == M_PI/2.0){
+		if(path_pos < path_dest)
+			return true;
+	}
+	else{
+		//if moving along negative x,y
+		if(path_dest < path_pos)
+			return true;
+	}
+	return false;
+}
+
+//returns -1 if too far right, returns 1 if too far left, 0 if ok
+int too_far(double theta_dest, double lane_pos, double lane_dest, double thresh){
+
+	if(theta_dest == 0 || -theta_dest == M_PI/2.0){
+		if(lane_pos-lane_dest > thresh)
+			return 1;
+		else if(lane_pos-lane_dest < -thresh)
+			return -1;
+		else
+			return 0;
+	}
+	else{
+		if(lane_dest-lane_pos > thresh)
+			return 1;
+		else if(lane_dest-lane_pos < -thresh)
+			return -1;
+		else
+			return 0;
+	}
+
+
+	return 0;
+}
+
+double lane_delta(double lane_pos, double lane_dest, double theta_dest){
+	
+	double width = 0.15;
+
+	if(theta_dest == 0){
+		return (lane_pos - lane_dest)/width;
+	}
+	else if(theta_dest == M_PI/2){
+		return (lane_dest - lane_pos)/width;
+	}
+	else if(theta_dest == M_PI || theta_dest == -M_PI){
+		return (lane_dest - lane_pos)/width;
+	}
+	else{
+		return (lane_pos - lane_dest)/width;
+	}
+
+}
+
 
 //================ MAIN MOTION CLASS ===============
 struct Motion_Class{
@@ -86,6 +146,8 @@ struct Motion_Class{
 	odo_data o_read;
 	bool first_read;
 	bool new_odo, new_command;
+
+	double theta_dest, x_dest, y_dest;
 
 
 	Motion_Class(){
@@ -123,6 +185,17 @@ struct Motion_Class{
 		o_read.right_ticks = msg->encoder_right_ticks;
 		new_odo = true;
 		first_read = false;
+		pthread_mutex_unlock(&comms_m);
+	}
+
+	void set_vals(double theta_d, double x_d, double y_d, double theta_i, double x_i, double y_i){
+		theta_dest = theta_d;
+		x_dest = x_d;
+		y_dest = y_d;
+		pthread_mutex_lock(&comms_m);
+		read.x_rob = x_i;
+		read.y_rob = y_i;
+		read.theta_rob = theta_i;
 		pthread_mutex_unlock(&comms_m);
 	}
 
@@ -194,65 +267,26 @@ struct Motion_Class{
 	    //return true;
 	}
 
-	//FUNCTION DETERMINES IF WE STILL HAVE SOMEWHERE TO GO
-	bool not_done(double theta_dest, double path_pos, double path_dest){
-
-		//if moving along positive x,y
-		if(theta_dest == 0 || theta_dest == M_PI/2.0){
-			if(path_pos < path_dest)
-				return true;
-		}
-		else{
-			//if moving along negative x,y
-			if(path_dest < path_pos)
-				return true;
-		}
-		return false;
-	}
-
-	//returns -1 if too far right, returns 1 if too far left, 0 if ok
-	int too_far(double theta_dest, double lane_pos, double lane_dest, double thresh){
-
-		if(theta_dest == 0 || theta_dest == M_PI/2.0){
-			if(lane_pos-lane_dest > thresh)
-				return 1;
-			else if(lane_pos-lane_dest < -thresh)
-				return -1;
-			else
-				return 0;
-		}
-		else{
-			if(lane_pos-lane_dest > thresh)
-				return -1;
-			else if(lane_pos-lane_dest < -thresh)
-				return 1;
-			else
-				return 0;
-		}
-
-
-		return 0;
-	}
-
-	void go_straight(double theta_dest, double x_dest, double y_dest, double theta_in, double x_in, double y_in){
+	void go_straight(){
 
 		maebot_motor_command_t msg;
 	    maebot_motor_command_t *msg_ptr = &msg; 
 	    //bot_commands_t bot_msg;
 	    //bot_commands_t *bot_msg_ptr = &bot_msg; 
 
-	    double theta_current = theta_in;
+	    double theta_current;
 	    double path_pos, lane_pos;
 	    double path_dest, lane_dest;
-	    double lane_error = 0, theta_error = 0;
 
-	    double base =  0.17;
+	    double base =  0.19;
 
-	    const double MAX_GAIN = 0.10;
+	    double MAX_GAIN = 0.08;
 	    const double MIN_GAIN = 0.05;
 	    const double L_MAX = 0.03;
-	    const double L_MIN = 0.05;
+	    double L_MIN = 0.08;
 	    double left_speed, right_speed;
+
+
 
 
 	    //REMEMBER: x in the robot's frame is the direction of motion, always!
@@ -261,52 +295,32 @@ struct Motion_Class{
 	    //ORIENT THE STARTING POSITION AND DESTINATION ACCORDINGLY
 
 	    //If moving along the positive x axis
-	    if(theta_dest == 0){
-	    	path_pos = x_in;
-	    	lane_pos = y_in;
+	    pthread_mutex_lock(&comms_m);
+	    theta_current = read.theta_rob;
+
+	    if(theta_dest == 0 || theta_dest == M_PI || theta_dest == -M_PI){
+	    	path_pos = read.x_rob;
+	    	lane_pos = read.y_rob;
 	    	path_dest = x_dest;
 	    	lane_dest = y_dest;
 
 	    }
 	    //if moving along the positive y axis
-	    else if(theta_dest == M_PI/2.0){
-	    	path_pos = y_in;
-	    	lane_pos = x_in;
-	    	path_dest = y_dest;
-	    	lane_dest = x_dest;
-
-	    }
-	    //if moving along the negative x axis
-	    else if(theta_dest == M_PI || theta_dest == -M_PI){
-	    	path_pos = x_in;
-	    	lane_pos = y_in;
-	    	path_dest = x_dest;
-	    	lane_dest = y_dest;
-
-	    }
-	    //if moving along the negative y axis
 	    else{
-	    	path_pos = y_in;
-	    	lane_pos = x_in;
+	    	path_pos = read.y_rob;
+	    	lane_pos = read.x_rob;
 	    	path_dest = y_dest;
 	    	lane_dest = x_dest;
-	    }
 
-	    pthread_mutex_lock(&comms_m);
-	   	read.x_rob = path_pos;
-	   	read.y_rob = lane_pos;
-		read.theta_rob = theta_current;	    
-		pthread_mutex_unlock(&comms_m);
+	    }
+	    pthread_mutex_unlock(&comms_m);
 
 	    while( not_done(theta_dest, path_pos, path_dest) ){
 
-	    	cout << "theta_current: " << 180*theta_current/M_PI << endl;
+	    	cout << "theta_curdddrent: " << 180*theta_current/M_PI << endl;
 	    	cout <<"path_position: " << path_pos << endl;
 	    	cout <<"lane_position: " << lane_pos << endl;
 	    	//BACKUP P controller works
-
-	    	lane_error += lane_pos - lane_dest;
-	    	theta_error += theta_current - theta_dest;
 
 	    	
 	    	//IF WE'RE ON THE LEFT SIDE OF THE LANE, CORRECT BY MOVING RIGHT
@@ -347,10 +361,42 @@ struct Motion_Class{
 	    	}
 			*/
 
-			left_speed = base + MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 + L_MIN*(lane_pos - lane_dest)/0.15; 
-			right_speed = base - MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 - L_MIN*(lane_pos - lane_dest)/0.15 ;
+	    	
+			if( too_far(theta_dest, lane_pos, lane_dest, 0.04) != 0 && abs(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI) < 4 ){
+				cout << "too far" << endl;
+				MAX_GAIN = 0.06;
+				L_MIN = 0.1; 
+			
+			}
+
+			else if(  abs(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI) > 4.0 ){
+				MAX_GAIN = 0.1;
+				L_MIN = 0.05;
+				cout <<"too wide" << endl; 
+
+			}
+			else{
+				MAX_GAIN = 0.08;
+				L_MIN = 0.08;
+			}
+		
+
+			left_speed = base + MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 + L_MIN*lane_delta(lane_pos, lane_dest, theta_dest); 
+			right_speed = base - MAX_GAIN*(180*eecs467::angle_diff(theta_current, theta_dest)/M_PI)/180.0 - L_MIN*lane_delta(lane_pos, lane_dest, theta_dest);
 
 
+			if(left_speed > 0.22){
+				left_speed =0.22;
+			}
+			else if(right_speed > 0.22){
+				left_speed =0.22;
+			}
+			else if(left_speed < 0.16){
+				left_speed = 0.16;
+			}
+			else if(right_speed < 0.16){
+				right_speed = 0.16;
+			}
 
 
 	    	//if(left_speed >= 0.24)
@@ -366,9 +412,16 @@ struct Motion_Class{
 	    	usleep(50000);
 
 	    	pthread_mutex_lock(&comms_m);
-	    	path_pos = read.x_rob;
-	    	lane_pos  = read.y_rob;
-	    	theta_current = read.theta_rob;
+	    	if(theta_dest == 0 || theta_dest == M_PI || theta_dest == M_PI){
+	    		path_pos = read.x_rob;
+	    		lane_pos  = read.y_rob;
+	    		theta_current = read.theta_rob;
+	    	}
+	    	else{
+	    		path_pos = read.y_rob;
+	    		lane_pos  = read.x_rob;
+	    		theta_current = read.theta_rob;
+	    	}
 	    	pthread_mutex_unlock(&comms_m);
 
 	    }
@@ -385,13 +438,14 @@ struct Motion_Class{
 
 int main(){
 	Motion_Class C;
+	C.set_vals(-M_PI/2.0, 0, -1.5, -M_PI/2.0, 0, 0);
 	lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &Motion_Class::odometry_handler, &C);
 	pthread_t odometry_comm;
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
 	//while(true){
 	//C.turn_90();
-	C.go_straight(0, 1.5, 0, 0, 0, 0);
+	C.go_straight();
 	//}
 
 

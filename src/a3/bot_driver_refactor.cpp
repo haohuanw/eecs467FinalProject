@@ -36,16 +36,20 @@ using namespace std;
 class state_t
 {
     public:
+        std::string color;
         lcm::LCM lcm_inst;
         PID pid;
         pthread_t lcm_thread;
         double deltax;
         double deltay;
-
-        state_t() : pid(&lcm_inst)
+        state_t(std::string color_in) : color(color_in), pid(&lcm_inst,color)
         {
-            lcm_inst.subscribe("MAEBOT_PID_COMMAND_RED", &state_t::command_handler, this);
-            lcm_inst.subscribe("MAEBOT_MOTOR_FEEDBACK", &state_t::odometry_handler, this);
+            std::string init_str = "MAEBOT_PID_COMMAND_";
+            std::string motor_feedback_channel = "MAEBOT_MOTOR_FEEDBACK_";
+            init_str.append(color);
+            motor_feedback_channel.append(color);
+            lcm_inst.subscribe(init_str, &state_t::command_handler, this);
+            lcm_inst.subscribe(motor_feedback_channel, &state_t::odometry_handler, this);
             deltax = 0;
             deltay = 0;
         }
@@ -58,7 +62,7 @@ class state_t
             pthread_mutex_lock(&pid.command_mutex);
             
             //if same dest, error correction for time lag
-            if(pid.dest.x_dest == msg->x_dest && pid.dest.y_dest == msg->y_dest){
+            if(pid.dest.x_dest == msg->x_dest && pid.dest.y_dest == msg->y_dest && !pid.turning){
                 pid.dest.x_rob = msg->x_rob + deltax;
                 pid.dest.y_rob = msg->y_rob + deltay;
                 pid.dest.theta_rob = msg->theta_rob;
@@ -162,9 +166,11 @@ void *lcm_handle_thread(void *data)
     return NULL;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    state_t state;
+    std::string color_in = std::string(argv[1]);
+    state_t state(color_in);
+    std::cout<<"running bot driver on maebot color: "<<state.color<<std::endl;
     pthread_create(&state.lcm_thread, NULL, lcm_handle_thread, (void*)(&state.lcm_inst));
     while(1)
     {
