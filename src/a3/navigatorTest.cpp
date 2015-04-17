@@ -20,52 +20,92 @@ void print(std::deque<eecs467::Point<double>>& path)
 int main()
 {
     Navigator n("../ground_truth/vmap.txt");
-    n.printDiagram();
+    //n.printDiagram();
 
-    eecs467::Point<double> a = {-.41945, -.817545};
-    eecs467::Point<double> b = {-.5, 0.886755};
+    // RIGHT
+    eecs467::Point<double> a = {-.6, -1.0};
+    eecs467::Point<double> b = {-.4, 1.0};
     std::deque<eecs467::Point<double>> path = n.pathPlan(a, b);
     print(path);
+    // (-0.5, -0.25) -> (-0.5, 1)
 
-    /*b.y = 0.25;
+    // RIGHT
+    a.x = -.5;
+    a.y = -.25;
     path = n.pathPlan(a, b);
     print(path);
+    // (-0.5, 1)
 
+    // RIGHT
+    b.x = -.5;
+    b.y = -.125;
+    path = n.pathPlan(a, b);
+    print(path);
+    // (-0.5, -0.125)
+    
+    // RIGHT
+    b.x = .5;
+    b.y = -.125;
+    path = n.pathPlan(a, b);
+    print(path);
+    // (-0.5, -0.125) -> (0.375, -0.125) -> (0.5, -0.125)
+    
+    // RIGHT
     a.x = -0.7;
     a.y = 1.1;
     b.x = -0.6;
     b.y = -1.1;
     path = n.pathPlan(a, b);
-    print(path);*/
+    print(path);
+    // (-0.75,0.25)->(-0.75,-0.125)->(-0.5,-0.125)->(0.375,-0.125)->(0.5,-0.125)->(0.5,-1.125)->(-0.5,-1.125)->(-0.5,-1.1)
 
-    /*b.y = -0.125;
-    std::vector<eecs467::Point<double>> path2 = n.pathPlan(a, b);
-    print(path2);
+    // RIGHT
+    b.y = -0.125;
+    path = n.pathPlan(a, b);
+    print(path);
+    // (-0.75,0.25)->(-0.75,-0.125)->(-0.6,-0.125)
 
+    // RIGHT
     b.x = 0.75;
-    path2 = n.pathPlan(a, b);
-    print(path2);
+    path = n.pathPlan(a, b);
+    print(path);
+    // (-0.75,0.25)->(-0.75,-0.125)->(-0.5,-0.125)->(0.375,-0.125)->(0.5,-0.125)->(0.75,-0.125);
 
+    // RIGHT
     a.x = 0.5;
     a.y = 0.25;
     b.x = -0.5;
     b.y = -0.25;
-    path2 = n.pathPlan(a, b);
-    print(path2);
+    path = n.pathPlan(a, b);
+    print(path);
+    // (0.5,-1.125)->(-0.5,-1.125)->(-0.5,-0.25)
 
+    // RIGHT
     a.x = -0.5;
     a.y = 1.125;
     b.x = -0.75;
     b.y = 1.375;
-    path2 = n.pathPlan(a, b);
-    print(path2);
+    path = n.pathPlan(a, b);
+    print(path);
+    // (0.5,1.125)->(0.5,0.25)->(0.5,-1.125)->(-0.5,-1.125)->(-0.5,-0.25)->(-0.5,-0.125)->(0.375,-0.125)->(0.5,-0.125)->(0.75,-0.125)->(0.75,1.375)->(-0.75,1.375)
 
+    // right
     a.x = 0.75;
     a.y = 0.125;
     b.x = -0.75;
     b.y = 0.125;
-    path2 = n.pathPlan(a, b);
-    print(path2);*/
+    path = n.pathPlan(a, b);
+    print(path);
+    // (0.5,0.125)->(-0.375,0.125)->(-0.5,0.125)->(-0.75,0.125)
+
+    // RIGHT
+    a.x = .75;
+    a.y = -1.0;
+    b.x = -.73;
+    b.y = -1.0;
+    path = n.pathPlan(a, b);
+    print(path);
+    // (0.75,-0.25)->(0.75,0.125)->(0.5,0.125)->(-0.375,0.125)->(-0.5,0.125)->(-0.75,0.125)0>(-0.75,-1)
 
     /*a.x = 0;
     a.y = 1.35;

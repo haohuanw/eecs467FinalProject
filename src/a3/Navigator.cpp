@@ -35,14 +35,17 @@ Navigator::~Navigator()
 
 std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> real_start, eecs467::Point<double> end)
 {
-    if(pointDist(real_start, end) < 0.05)
+    if(fabs(real_start.x - end.x) < 0.05 && fabs(real_start.y - end.y) < 0.05)
     {
         std::deque<eecs467::Point<double>> retval;
         return retval;
     }
     vnode_path *start_node, *end_node;
     std::pair<eecs467::Point<double>, eecs467::Point<double>> end_pair = findClosestEnd(end);
+    //std::cout << "end: " << end.x << ", " << end.y << std::endl;
+    //std::cout << "end pair: " << end_pair.first.x << ", " << end_pair.first.y << ",     " << end_pair.second.x << ", " << end_pair.second.y << std::endl;
     eecs467::Point<double> start = findClosestStart(real_start);
+    //std::cout << "start: " << start.x << ", " << start.y << std::endl;
     std::vector<vnode_path> nodes;
     nodes.resize(diagram.size());
     for(uint i = 0; i < diagram.size(); i++)
@@ -66,12 +69,20 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
     {
         //printOpenSet(open_set);
         vnode_path *current = open_set.top();
+        //std::cout << "end node:" << end_node->x << ", " << end_node->y << ", " << end_node << std::endl;
+        //std::cout << "current: " << current->x << ", " << current->y << ", " << current << std::endl;
         if(current == end_node)
         {
             std::deque<eecs467::Point<double>> path;
             reconstructPath(current, path, nodes);
-            path.push_back(end_pair.second);
-            printPath(path);
+            if(path.begin()->x == real_start.x && path.begin()->y == real_start.y)
+            {
+                path.pop_front();
+            }
+            if(path.empty() || (path.end() - 1)->x != end_pair.second.x || (path.end()-1)->y != end_pair.second.y)
+            {
+                path.push_back(end_pair.second);
+            }
             return path;
         }
         open_set.pop();
@@ -103,18 +114,37 @@ std::deque<eecs467::Point<double>> Navigator::pathPlan(eecs467::Point<double> re
     return retval;
 }
 
+bool Navigator::isNode(eecs467::Point<double> p)
+{
+    for(uint i = 0; i < diagram.size(); i++)
+    {
+        if(diagram[i].x == p.x && diagram[i].y == p.y) return true;
+    }
+    return false;
+}
+
 eecs467::Point<double> Navigator::findClosestStart(eecs467::Point<double> p)
 {
+    if(isNode(p)) return p;
     std::pair<int, eecs467::Point<double>> retval = findClosestLine(p);
-    if(isSamePoint(diagram_lines[retval.first].start, p)) return p;
+    //std::cout << "intersect: " << retval.second.x << ", " << retval.second.y << std::endl;
+    if(isSamePoint(diagram_lines[retval.first].start, p))
+        return p;
+    else if(isSamePoint(diagram_lines[retval.first].end, p))
+        return p;
     return diagram_lines[retval.first].end;
 }
 
 // retval: closest node, actual endpoint
 std::pair<eecs467::Point<double>, eecs467::Point<double>> Navigator::findClosestEnd(eecs467::Point<double> p)
 {
+    if(isNode(p)) return std::make_pair(p, p);
     std::pair<int, eecs467::Point<double>> retval = findClosestLine(p);
+    //std::cout << "P: " << p.x << ", " << p.y << std::endl;
+    //std::cout << "diagram line: (" << diagram_lines[retval.first].start.x << ", " << diagram_lines[retval.first].start.y << "), ("
+    //          << diagram_lines[retval.first].end.x << ", " << diagram_lines[retval.first].end.y << ")" << std::endl;
     if(isSamePoint(diagram_lines[retval.first].end, p)) return std::make_pair(p, p);
+    if(isSamePoint(diagram_lines[retval.first].start, p)) return std::make_pair(p, p);
     return std::make_pair(diagram_lines[retval.first].end, retval.second);
 }
 
@@ -174,14 +204,7 @@ std::pair<int,eecs467::Point<double>> Navigator::findClosestLine(eecs467::Point<
         intersect.y = p.y;
     }
     std::pair<int, eecs467::Point<double>> retval(index, intersect);
-    //std::cout << "distance: " << dist << std::endl;
-    //std::cout << "index:    " << index << std::endl;
     return retval;
-}
-
-double Navigator::pointDist(eecs467::Point<double> a, eecs467::Point<double> b)
-{
-    return sqrt((b.x - a.x)*(b.x - a.x) + (b.y - a.y)*(b.y - a.y));
 }
 
 double Navigator::dist(vnode_path *a, vnode_path *b)
@@ -204,6 +227,7 @@ void Navigator::remove(vnode_path *node, std::vector<vnode_path*>& open_set_vect
 
 void Navigator::printPath(std::deque<eecs467::Point<double> >& path)
 {
+    std::cout << "path.size(): " << path.size() << std::endl;
     for(uint i = 0; i < path.size(); i++)
     {
         std::cout << "(" << path[i].x << ", " << path[i].y << ") -> ";
