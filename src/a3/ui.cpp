@@ -298,7 +298,7 @@ static void* render_loop(void *data){
             // display maebot path to next waypoint
             // add to camera
             if(state->maebot_list[state->maebot_curr_selected].curr_dest.x != DBL_MAX && state->maebot_list[state->maebot_curr_selected].curr_dest.y != DBL_MAX){
-                state->maebot_list[state->maebot_curr_selected].path = state->nav.pathPlan(state->maebot_list[state->maebot_curr_selected].curr_pos, state->maebot_list[state->maebot_curr_selected].curr_dest);
+                state->maebot_list[state->maebot_curr_selected].path = state->nav.pathPlan(state->maebot_list[state->maebot_curr_selected].particle_pos, state->maebot_list[state->maebot_curr_selected].curr_dest);
             }
             if(! state->maebot_list[state->maebot_curr_selected].path.empty()){
                 std::vector<float> maebot_path;
