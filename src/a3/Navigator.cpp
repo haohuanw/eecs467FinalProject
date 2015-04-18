@@ -127,7 +127,7 @@ bool Navigator::nodeWithinError(eecs467::Point<double>& p, eecs467::Point<double
 {
     for(uint i = 0; i < diagram.size(); i++)
     {
-        if(fabs(diagram[i].x - p.x) < 0.1 && fabs(diagram[i].y - p.y) < 0.1)
+        if(fabs(diagram[i].x - p.x) < 0.05 && fabs(diagram[i].y - p.y) < 0.05)
         {
             closeNode.x = diagram[i].x;
             closeNode.y = diagram[i].y;
@@ -140,14 +140,11 @@ bool Navigator::nodeWithinError(eecs467::Point<double>& p, eecs467::Point<double
 eecs467::Point<double> Navigator::findClosestStart(eecs467::Point<double> p)
 {
     if(isNode(p)) return p;
-    //eecs467::Point<double> closeNode;
-    //bool closeNodeWithinError = nodeWithinError(p, closeNode);
-    //if(closeNodeWithinError) return closeNode;
+    eecs467::Point<double> closeNode;
+    bool closeNodeWithinError = nodeWithinError(p, closeNode);
+    if(closeNodeWithinError) return closeNode;
     std::pair<int, eecs467::Point<double>> retval = findClosestLine(p);
-    //std::cout << "intersect: " << retval.second.x << ", " << retval.second.y << std::endl;
-    if(isSamePoint(diagram_lines[retval.first].start, p))
-        return p;
-    else if(isSamePoint(diagram_lines[retval.first].end, p))
+    if(isSamePoint(diagram_lines[retval.first].end, p))
         return p;
     return diagram_lines[retval.first].end;
 }

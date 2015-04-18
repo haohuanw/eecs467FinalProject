@@ -26,6 +26,7 @@
 #include "math.h"
 
 #define START_SPEED 0.20f
+#define TURN_START_SPEED 0.16f
 #define MIN_SPEED 0.18f
 #define MAX_SPEED 0.22f
 #define MIN_GAIN 0.0004f
@@ -95,7 +96,7 @@ class PID
         double theta_error()
         {
             pthread_mutex_lock(&command_mutex);
-            double retval = eecs467::angle_diff(dest.theta_rob, dest.theta_dest);
+            double retval = fabs(eecs467::angle_diff(dest.theta_rob, dest.theta_dest));
             pthread_mutex_unlock(&command_mutex);
             return retval;
         }
@@ -180,7 +181,7 @@ class PID
 
         void turn_to_dest()
         {
-            std::cout<<"turn_to_dest current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
+            //std::cout<<"turn_to_dest current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
             maebot_motor_command_t cmd;
             bot_commands_t ret_msg = {0, 0, 0, 0, 0, 0, 1};
 
@@ -192,27 +193,29 @@ class PID
 
             if(eecs467::angle_diff(angle_rob, angle_dest) > 0)
             {
-                cmd.motor_left_speed = START_SPEED;
-                cmd.motor_right_speed = -START_SPEED;
+                cmd.motor_left_speed = TURN_START_SPEED;
+                cmd.motor_right_speed = -TURN_START_SPEED;
             }
             else
             {
-                cmd.motor_left_speed = -START_SPEED;
-                cmd.motor_right_speed = START_SPEED;
+                cmd.motor_left_speed = -TURN_START_SPEED;
+                cmd.motor_right_speed = TURN_START_SPEED;
             }
 
-            double angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
-            while(fabs(angle_diff) > M_PI/60)
+            //double angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
+            //std::cout<<"turn_to_dest angle_diff: "<<angle_diff<<std::endl;
+            while(fabs(theta_error()) > M_PI/60)
+            //while(fabs(angle_diff) > M_PI/60)
             {
                 if(stop_command) { wait_until_clear(cmd); }
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
                 usleep(5000);
 
-                pthread_mutex_lock(&command_mutex);
+                /*pthread_mutex_lock(&command_mutex);
                 double angle_rob = dest.theta_rob;
                 double angle_dest = dest.theta_dest;
                 pthread_mutex_unlock(&command_mutex);
-                angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
+                angle_diff = eecs467::angle_diff(angle_dest, angle_rob);*/
             }
             pthread_mutex_lock(&command_mutex);
             turning = false;
@@ -315,7 +318,7 @@ class PID
             //std::cout << "updated cmd: " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;
 
             if( too_far(theta_dest, lane_pos, lane_dest, 0.04) != 0 && abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) < 4 ){
-                std::cout << "too far" << std::endl;
+                //std::cout << "too far" << std::endl;
                 T_gain = 0.06;
                 S_gain = 0.1; 
 
@@ -324,7 +327,7 @@ class PID
             else if(  abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) > 4.0 ){
                 T_gain = 0.1;
                 S_gain = 0.05;
-                std::cout <<"too wide" << std::endl; 
+                //std::cout <<"too wide" << std::endl; 
 
             }
             else{
@@ -376,11 +379,11 @@ class PID
             while(not_done(path_pos, path_dest, theta_dest))
             {
                 if(stop_command) { wait_until_clear(cmd); }
-                std::cout << "current position: " << dest.x_rob << " " << dest.y_rob << std::endl;
-                std::cout << "dest position:    " << dest.x_dest << " " << dest.y_dest << std::endl;
+                //std::cout << "current position: " << dest.x_rob << " " << dest.y_rob << std::endl;
+                //std::cout << "dest position:    " << dest.x_dest << " " << dest.y_dest << std::endl;
                 //std::cout << "current: (" << dest.x_rob << ", " << dest.y_rob << ", " << dest.theta_rob << ")\n";
                 //std::cout << "dest:    (" << dest.x_dest << ", " << dest.y_dest << ", " << dest.theta_dest << ")\n";
-                std::cout<<"current theta:"<<theta_rob<<"  dest theta:"<<theta_dest<<std::endl;
+                //std::cout<<"current theta:"<<theta_rob<<"  dest theta:"<<theta_dest<<std::endl;
                 correct_motor_speeds(cmd, path_pos, lane_pos, path_dest, lane_dest, theta_rob, theta_dest);
 
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);

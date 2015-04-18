@@ -57,8 +57,8 @@ class state_t
 
         void command_handler(const lcm::ReceiveBuffer *rbuf, const string& channel, const bot_commands_t *msg)
         {
-            std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
-                        <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
+            //std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
+            //            <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
             pthread_mutex_lock(&pid.command_mutex);
             
             //if same dest, error correction for time lag
@@ -81,7 +81,7 @@ class state_t
 
             if(pid.dest.x_rob == pid.dest.x_dest && pid.dest.y_rob == pid.dest.y_dest)
             {
-                std::cout << "received stop command" << std::endl;
+                //std::cout << "received stop command" << std::endl;
                 pid.stop_command = true;
                 return;
             }
@@ -170,22 +170,24 @@ int main(int argc, char* argv[])
 {
     std::string color_in = std::string(argv[1]);
     state_t state(color_in);
-    std::cout<<"running bot driver on maebot color: "<<state.color<<std::endl;
+    //std::cout<<"running bot driver on maebot color: "<<state.color<<std::endl;
     pthread_create(&state.lcm_thread, NULL, lcm_handle_thread, (void*)(&state.lcm_inst));
     while(1)
     {
         if(!state.pid.at_destination())
         {
-            if(fabs(state.pid.theta_error()) > M_PI/6)
+            //std::cout<<"theta error:"<<state.pid.theta_error()<<std::endl;
+            if(fabs(state.pid.theta_error()) > M_PI/12)
             {
-                std::cout << "theta error: " << state.pid.theta_error() << std::endl;
-                std::cout << "turn" << std::endl;
+                usleep(100000);
+                //std::cout << "turn with theta error: " << state.pid.theta_error() << std::endl;
                 state.pid.turn_to_dest();
             }
             else
             {
-                std::cout << "stright" << std::endl;
+                //std::cout << "stright with theta error:" << state.pid.theta_error() << std::endl;
                 state.pid.go_straight();
+                //usleep(50000);
             }
         }
     }
