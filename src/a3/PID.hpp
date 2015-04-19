@@ -184,6 +184,7 @@ class PID
             //std::cout<<"turn_to_dest current theta:"<<dest.theta_rob<<"  dest theta:"<<dest.theta_dest<<std::endl;
             maebot_motor_command_t cmd;
             bot_commands_t ret_msg = {0, 0, 0, 0, 0, 0, 1};
+            double speed = 0.064;
 
             pthread_mutex_lock(&command_mutex);
             turning = true;
@@ -191,31 +192,37 @@ class PID
             double angle_dest = dest.theta_dest;
             pthread_mutex_unlock(&command_mutex);
 
-            if(eecs467::angle_diff(angle_rob, angle_dest) > 0)
-            {
-                cmd.motor_left_speed = TURN_START_SPEED;
-                cmd.motor_right_speed = -TURN_START_SPEED;
-            }
-            else
-            {
-                cmd.motor_left_speed = -TURN_START_SPEED;
-                cmd.motor_right_speed = TURN_START_SPEED;
-            }
+
 
             //double angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
             //std::cout<<"turn_to_dest angle_diff: "<<angle_diff<<std::endl;
-            while(fabs(theta_error()) > M_PI/60)
+            while(angle_rob < angle_dest * 0.9)    
             //while(fabs(angle_diff) > M_PI/60)
             {
                 if(stop_command) { wait_until_clear(cmd); }
+                    cmd.motor_left_speed =  -speed*((angle_dest - angle_rob)/abs(angle_dest))- 0.13;
+                    cmd.motor_right_speed = speed*((angle_dest - angle_rob)/abs(angle_dest)) + 0.13;
+                    if(eecs467::angle_diff(angle_rob, angle_dest) > 0)
+                    {
+                        cmd.motor_left_speed = cmd.motor_left_speed;
+                        cmd.motor_right_speed = cmd.motor_right_speed;
+                    }
+                    else
+                    {
+                        cmd.motor_left_speed = -cmd.motor_left_speed;
+                        cmd.motor_right_speed = -cmd.motor_right_speed;
+                    }
+
+
+
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
                 usleep(5000);
 
-                /*pthread_mutex_lock(&command_mutex);
+                pthread_mutex_lock(&command_mutex);
                 double angle_rob = dest.theta_rob;
                 double angle_dest = dest.theta_dest;
                 pthread_mutex_unlock(&command_mutex);
-                angle_diff = eecs467::angle_diff(angle_dest, angle_rob);*/
+                //angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
             }
             pthread_mutex_lock(&command_mutex);
             turning = false;
@@ -278,7 +285,12 @@ class PID
                 T_gain = 0.05;
                 S_gain = 0.1;
             }
-
+            else{
+                basel = 0.19;
+                baser = 0.155;
+                T_gain = 0.05;
+                S_gain = 0.1;
+            }
             //std::cout << "theta robot: " << theta_rob << std::endl;
             //std::cout << "theta dest:  " << theta_dest << std::endl;
             // if on left side of lane, move right
@@ -343,7 +355,7 @@ class PID
             }*/
             //std::cout << "updated cmd: " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;
 
-            if( too_far(theta_dest, lane_pos, lane_dest, 0.04) != 0 && abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) < 4 ){
+            if( too_far(theta_dest, lane_pos, lane_dest, 0.04) != 0 && abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) < 8 ){
                 //std::cout << "too far" << std::endl;
                 if(r == 1){
                     T_gain = 0.06; //green mabebot 0.05
@@ -352,6 +364,10 @@ class PID
                 else if(g == 1){
                     T_gain = 0.05;
                     S_gain = 0.1; 
+                }
+                 else if(b == 1){
+                    T_gain = 0.07;
+                    S_gain = 0.12; 
                 }
             }
 
@@ -364,6 +380,10 @@ class PID
                     T_gain = 0.08; 
                     S_gain = 0.06;
                 }
+                 else if(b == 1){
+                    T_gain = 0.1;
+                    S_gain = 0.06; 
+                }
                 //std::cout <<"too wide" << std::endl; 
 
             }
@@ -373,6 +393,10 @@ class PID
                     S_gain = 0.08;  //green mabebot 0.06
                 }
                  else if(g==1){
+                    T_gain = 0.06; 
+                    S_gain = 0.06;
+                }
+                else{
                     T_gain = 0.06; 
                     S_gain = 0.06;
                 }
