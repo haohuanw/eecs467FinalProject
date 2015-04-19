@@ -246,12 +246,38 @@ class PID
             }
         }
 
-        void correct_motor_speeds(maebot_motor_command_t& cmd, double& path_pos, double& lane_pos, double& path_dest, double& lane_dest, double& theta_rob, double& theta_dest)
+        void correct_motor_speeds(maebot_motor_command_t& cmd, double& path_pos, double& lane_pos, double& path_dest, double& lane_dest, double& theta_rob, double& theta_dest, std::string  color)
         {
             double left_speed, right_speed;
-            double base = 0.17;
-            double T_gain = 0.05;
-            double S_gain = 0.1;
+            bool r = 0;
+            bool g = 0;
+            bool b = 0;
+            double basel;
+            double baser;
+            double T_gain;
+            double S_gain;
+             if( color == "RED"){
+                r = 1;
+             }
+             else if(color == "GREEN"){
+                g = 1;
+             }
+             else{
+                b = 1;
+             }
+
+            if(r ==1 ){
+                basel = 0.19; 
+                baser = 0.19;
+                T_gain = 0.05;
+                S_gain = 0.1;
+            }
+            else if(g == 1){
+                basel = 0.18;
+                baser = 0.155;
+                T_gain = 0.05;
+                S_gain = 0.1;
+            }
 
             //std::cout << "theta robot: " << theta_rob << std::endl;
             //std::cout << "theta dest:  " << theta_dest << std::endl;
@@ -319,37 +345,54 @@ class PID
 
             if( too_far(theta_dest, lane_pos, lane_dest, 0.04) != 0 && abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) < 4 ){
                 //std::cout << "too far" << std::endl;
-                T_gain = 0.06;
-                S_gain = 0.1; 
-
+                if(r == 1){
+                    T_gain = 0.06; //green mabebot 0.05
+                    S_gain = 0.1; 
+                }
+                else if(g == 1){
+                    T_gain = 0.05;
+                    S_gain = 0.1; 
+                }
             }
 
             else if(  abs(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI) > 4.0 ){
-                T_gain = 0.1;
-                S_gain = 0.05;
+                if(r==1){
+                    T_gain = 0.1; //green mabebot 0.08
+                    S_gain = 0.04;  //green mabebot 0.06
+                }
+                else if(g==1){
+                    T_gain = 0.08; 
+                    S_gain = 0.06;
+                }
                 //std::cout <<"too wide" << std::endl; 
 
             }
             else{
-                T_gain = 0.08;
-                S_gain = 0.08;
+                if(r == 1){
+                    T_gain = 0.08; //green mabebot 0.06
+                    S_gain = 0.08;  //green mabebot 0.06
+                }
+                 else if(g==1){
+                    T_gain = 0.06; 
+                    S_gain = 0.06;
+                }
             }
 
-            left_speed = base + T_gain*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 + S_gain*lane_delta(lane_pos, lane_dest, theta_dest); 
-            right_speed = base - T_gain*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 - S_gain*lane_delta(lane_pos, lane_dest, theta_dest);
+            left_speed = basel + T_gain*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 + S_gain*lane_delta(lane_pos, lane_dest, theta_dest); 
+            right_speed = baser - T_gain*(180*eecs467::angle_diff(theta_rob, theta_dest)/M_PI)/180.0 - S_gain*lane_delta(lane_pos, lane_dest, theta_dest);
 
 
-            if(left_speed > 0.22){
-                left_speed =0.22;
+            if(left_speed > basel + 0.02){
+                left_speed = basel + 0.02;
             }
-            else if(right_speed > 0.22){
-                left_speed =0.22;
+            if(right_speed > baser + 0.02){
+                right_speed =baser + 0.02;
             }
-            else if(left_speed < 0.16){
-                left_speed = 0.16;
+            if(left_speed < basel - 0.02){
+                left_speed = basel - 0.02;
             }
-            else if(right_speed < 0.16){
-                right_speed = 0.16;
+            if(right_speed < baser -0.02){
+                right_speed = baser - 0.02;
             }
 
             cmd.motor_left_speed = left_speed;
@@ -357,7 +400,7 @@ class PID
 
         }
 
-        void go_straight()
+        void go_straight(std::string color)
         {
             //std::cout << "inside go straight" << std::endl;
             //std::cout << "current position: " << dest.x_rob << " " << dest.y_rob << std::endl;
@@ -384,7 +427,7 @@ class PID
                 //std::cout << "current: (" << dest.x_rob << ", " << dest.y_rob << ", " << dest.theta_rob << ")\n";
                 //std::cout << "dest:    (" << dest.x_dest << ", " << dest.y_dest << ", " << dest.theta_dest << ")\n";
                 //std::cout<<"current theta:"<<theta_rob<<"  dest theta:"<<theta_dest<<std::endl;
-                correct_motor_speeds(cmd, path_pos, lane_pos, path_dest, lane_dest, theta_rob, theta_dest);
+                correct_motor_speeds(cmd, path_pos, lane_pos, path_dest, lane_dest, theta_rob, theta_dest, color);
 
                 lcm->publish("MAEBOT_MOTOR_COMMAND", &cmd);
                 //std::cout << "published motor command " << cmd.motor_left_speed << "  " << cmd.motor_right_speed << std::endl;

@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
             else
             {
                 //std::cout << "stright with theta error:" << state.pid.theta_error() << std::endl;
-                state.pid.go_straight();
+                state.pid.go_straight(color_in);
                 //usleep(50000);
             }
         }
