@@ -11,7 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
-
+#include <deque>
 
 // common
 #include "common/getopt.h"
@@ -33,6 +33,14 @@
 
 using namespace std;
 
+struct odometry_data
+{
+    int64_t timestamp;
+    double delta_x;
+    double delta_y;
+    double delta_theta;
+};
+
 class state_t
 {
     public:
@@ -40,8 +48,8 @@ class state_t
         lcm::LCM lcm_inst;
         PID pid;
         pthread_t lcm_thread;
-        double deltax;
-        double deltay;
+        std::deque<odometry_data> odometry_updates;
+    public:
         state_t(std::string color_in) : color(color_in), pid(&lcm_inst,color)
         {
             std::string init_str = "MAEBOT_PID_COMMAND_";
@@ -50,8 +58,6 @@ class state_t
             motor_feedback_channel.append(color);
             lcm_inst.subscribe(init_str, &state_t::command_handler, this);
             lcm_inst.subscribe(motor_feedback_channel, &state_t::odometry_handler, this);
-            deltax = 0;
-            deltay = 0;
         }
         ~state_t() {}
 
@@ -60,24 +66,24 @@ class state_t
             //std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
             //            <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
             pthread_mutex_lock(&pid.command_mutex);
+            std::cout << "command handler" << std::endl;
             
             //if same dest, error correction for time lag
-            if(pid.dest.x_dest == msg->x_dest && pid.dest.y_dest == msg->y_dest && !pid.turning){
-                pid.dest.x_rob = msg->x_rob + deltax;
-                pid.dest.y_rob = msg->y_rob + deltay;
-                pid.dest.theta_rob = msg->theta_rob;
-                deltax = 0;
-                deltay = 0;
+            std::cout<<"Before pop:"<<odometry_updates.size()<<std::endl;
+            while(!odometry_updates.empty() && odometry_updates.front().timestamp < msg->utime)
+            {
+                odometry_updates.pop_front();
             }
-            //diff dest, no error correction
-            else{
-                pid.dest.x_rob = msg->x_rob;
-                pid.dest.y_rob = msg->y_rob;
-                pid.dest.theta_rob = msg->theta_rob;
-                deltax = 0;
-                deltay = 0;
+            std::cout<<"After pop:"<<odometry_updates.size()<<std::endl;
+            pid.dest.x_rob = msg->x_rob;
+            pid.dest.y_rob = msg->y_rob;
+            pid.dest.theta_rob = msg->theta_rob;
+            for(uint i = 0; i < odometry_updates.size(); i++)
+            {
+                pid.dest.x_rob += odometry_updates[i].delta_x;
+                pid.dest.y_rob += odometry_updates[i].delta_y;
+                pid.dest.theta_rob = eecs467::wrap_to_pi(pid.dest.theta_rob + odometry_updates[i].delta_theta);
             }
-
 
             if(pid.dest.x_rob == pid.dest.x_dest && pid.dest.y_rob == pid.dest.y_dest)
             {
@@ -94,7 +100,6 @@ class state_t
             
             if(pid.dest.x_dest != msg->x_dest || pid.dest.y_dest != msg->y_dest)
             {
-                pid.is_first_read = true;
                 pid.dest.x_dest = msg->x_dest;
                 pid.dest.y_dest = msg->y_dest;
 
@@ -138,20 +143,16 @@ class state_t
             pthread_mutex_lock(&pid.command_mutex);
 
 
-            deltax += cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
-            deltay += sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
-
+            double deltax = cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
+            double deltay = sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
+        	odometry_updates.push_back(odometry_data{msg->utime, deltax, deltay, d_theta});
+            std::cout<<"push back the odometry data"<<std::endl;
             pid.dest.x_rob = cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.x_rob;
             pid.dest.y_rob = sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.y_rob;
             pid.dest.theta_rob = eecs467::wrap_to_pi(d_theta + pid.dest.theta_rob);
             pid.odometry.left_ticks = msg->encoder_left_ticks;
             pid.odometry.right_ticks = msg->encoder_right_ticks;
 
-
-            
-            /*cout << "x_rob: " << pid.dest.x_rob 
-                 << " y_rob: " << pid.dest.y_rob 
-                 << " theta_rob: " << pid.dest.theta_rob << endl;*/
             pthread_mutex_unlock(&pid.command_mutex);
         }
 };

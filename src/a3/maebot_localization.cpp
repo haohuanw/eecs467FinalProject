@@ -129,7 +129,7 @@ class state_t
         void init_thread()
         {
             pthread_create(&lcm_thread_pid,NULL,&state_t::run_lcm,this);
-            //pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
+            pthread_create(&animate_thread,NULL,&state_t::render_loop,this);
         }
 
         void init_handler (const lcm::ReceiveBuffer* rbuf, const std::string& channel,const maebot_pose_t *msg){
@@ -183,7 +183,7 @@ class state_t
 
                  maebot_pose_t pose_msg;
                     pose_msg = best;
-
+		pose_msg.utime = msg->utime;
                     std::string msg_str = "MAEBOT_LOCALIZATION_";
                     msg_str.append(color);
 
@@ -415,9 +415,9 @@ int main(int argc, char ** argv)
     printf("%s",MAP_TO_READ);
     color = argv[2];
     state_t state;
-    //state.init_thread();
+    state.init_thread();
     //comment below disable the vx
-    /*state.draw(&state,state.world);
+    state.draw(&state,state.world);
     gdk_threads_init();
     gdk_threads_enter();
     gtk_init(&argc, &argv);
@@ -433,11 +433,11 @@ int main(int argc, char ** argv)
     gtk_main(); // Blocks as long as GTK window is open
 
     gdk_threads_leave();
-    vx_gtk_display_source_destroy(state.appwrap);*/
+    vx_gtk_display_source_destroy(state.appwrap);
     //comment above disable vx
     //pthread_join(state.animate_thread,NULL);
-    while(1){
+    /*while(1){
         state.lcm.handle();
-    }
+    }*/
     //vx_global_destroy();
 }

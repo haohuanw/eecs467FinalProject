@@ -1,5 +1,6 @@
 struct bot_commands_t
 {
+  int64_t utime;
 	//robot coords
   double x_rob;
   double y_rob;
@@ -9,7 +10,4 @@ struct bot_commands_t
   double x_dest;
   double y_dest;
   
-  //invariants 
-	double turning;
-	double reach_dest;
 }

@@ -145,6 +145,7 @@ class state_t
 
         void publish_stop_command(maebot_color color)
         {
+			std::cout << "stop command" << std::endl;
             maebot_pose_t location = {0, 0, 0, 0};
             eecs467::Point<double> dest = {0, 0};
             publish_to_maebot(color, location, dest);
@@ -158,34 +159,44 @@ class state_t
             else if(channel == "MAEBOT_LOCALIZATION_BLUE") { color = BLUE; }
             else if(channel == "MAEBOT_LOCALIZATION_GREEN") { color = GREEN; }
             else { std::cout << "tried to get localization data from wrong channel: " << channel << std::endl; return; }
-            std::cout << "color: " << color << std::endl;
             pthread_mutex_lock(&paths_mutexes[color]);
-            std::cout << "grabbed path lock" << std::endl;
             pthread_mutex_lock(&localization_mutex);
-            std::cout << "grabbed localization mutex" << std::endl;
             
+			/*if(!maebot_paths[color].empty() && within_error(color))
+			{
+				std::cout << "overshot" << std::endl;
+				publish_stop_command(color);
+				maebot_paths[color].pop_front();
+				if(maebot_paths[color].empty())
+				{
+                	pthread_mutex_lock(&dests_mutexes[color]);
+                	maebot_dests[color].pop_front();
+                	pthread_mutex_unlock(&dests_mutexes[color]);
+				}
+			}*/
+
             maebot_locations[color] = *msg;
             if(at_intersection_point(*msg) && !moving_through_intersection[color])
             {
-                std::cout << "apparently at intersection" << std::endl;
                 publish_stop_command(color);
                 pthread_mutex_lock(&waiting_queue_mutex);
-                std::cout << "locked queue" << std::endl;
                 waiting_queue.push(color);
-                //pthread_mutex_unlock(&paths_mutexes[color]);
-                //pthread_mutex_unlock(&localization_mutex);
+                pthread_mutex_unlock(&paths_mutexes[color]);
+                pthread_mutex_unlock(&localization_mutex);
                 while(waiting_queue.front() != color)
                 {
                     pthread_cond_wait(&waiting_queue_cv, &waiting_queue_mutex);
                 }
                 moving_through_intersection[color] = true;
-                std::cout << "outside wait" << std::endl;
             }
+			else
+			{
+				pthread_mutex_unlock(&localization_mutex);
+				pthread_mutex_unlock(&paths_mutexes[color]);
+			}
 
-            std::cout << "here 1" << std::endl;
             if(!waiting_queue.empty() && waiting_queue.front() == color && !in_intersection(color))
             {
-                std::cout << "at front of waiting queue" << std::endl;
                 moving_through_intersection[color] = false;
                 waiting_queue.pop();
                 pthread_mutex_unlock(&waiting_queue_mutex);
@@ -194,16 +205,12 @@ class state_t
             else{
                 pthread_mutex_unlock(&waiting_queue_mutex); 
             }
-            std::cout << "here 2" << std::endl;
             if(!maebot_paths[color].empty())
             {
-                std::cout << "publishing" << std::endl;
                 publish_to_maebot(color, *msg, maebot_paths[color].front());
             }
             pthread_mutex_unlock(&localization_mutex);
-            std::cout << "localization mutex unlocked" << std::endl;
             pthread_mutex_unlock(&paths_mutexes[color]);
-            std::cout << "path mutex unlocked" << std::endl;
         }
 
         void dest_list_handler(const lcm::ReceiveBuffer *rbuf, const std::string& channel, const ui_dest_list_t *msg){
@@ -263,6 +270,7 @@ class state_t
             std::cout << "Publishing location: (" << location.x << ", " << location.y << ") -> (" << dest.x << ", " << dest.y << ")\n";
             reached_location[maebot] = false;
             bot_commands_t cmd;
+			cmd.utime = location.utime;
             cmd.x_rob = location.x;
             cmd.y_rob = location.y;
             cmd.theta_rob = location.theta;
@@ -290,14 +298,17 @@ class state_t
             }
         }
 
-        void publish_to_ui(maebot_color maebot)
+        void publish_to_ui(maebot_color maebot, std::deque<eecs467::Point<double>>& path)
         {
             std::cout << "publishing to ui" << std::endl;
             ui_dest_list_t data;
-            data.num_way_points = 1;
+            data.num_way_points = path.size();
             data.color = (int) maebot;
-            data.x_poses.push_back(maebot_dests[maebot].front().x);
-            data.y_poses.push_back(maebot_dests[maebot].front().y);
+			for(uint i = 0; i < path.size(); i++)
+			{
+				data.x_poses.push_back(path[i].x);
+				data.y_poses.push_back(path[i].y);
+			}
             lcm.publish("MAEBOT_DEST", &data);
         }
 
@@ -344,24 +355,20 @@ static void* run_thread(void *data)
     while (state->running)
     {
         pthread_mutex_lock(&state->dests_mutexes[*color]);
-        std::cout << "locked dests_mutex before checking dests.empty()" << std::endl;
+        //std::cout << "locked dests_mutex before checking dests.empty()" << std::endl;
         while(state->maebot_dests[*color].empty())
         {
             pthread_cond_wait(&state->dests_cvs[*color], &state->dests_mutexes[*color]);
         }
         pthread_mutex_unlock(&state->dests_mutexes[*color]);
-        std::cout << "exited first wait" << std::endl;
+        //std::cout << "exited first wait" << std::endl;
 
         // if no path (not calculated yet), create path
         pthread_mutex_lock(&state->paths_mutexes[*color]);
-        std::cout << "locked paths mutex" << std::endl;
         if(state->maebot_paths[*color].empty())
         {
-            std::cout << "creating path to first dest" << std::endl;
             pthread_mutex_lock(&state->localization_mutex);
-            std::cout << "locked localization mutex when path empty" << std::endl;
             pthread_mutex_lock(&state->dests_mutexes[*color]);
-            std::cout << "locked dests mutex when path empty" << std::endl;
             
             state->maebot_paths[*color] = state->nav.pathPlan(eecs467::Point<double>{state->maebot_locations[*color].x,
                                                               state->maebot_locations[*color].y},
@@ -374,32 +381,27 @@ static void* run_thread(void *data)
             }
             std::cout << std::endl;
             state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
-            state->publish_to_ui(*color);
+            state->publish_to_ui(*color, state->maebot_paths[*color]);
             
             pthread_mutex_unlock(&state->dests_mutexes[*color]);
             pthread_mutex_unlock(&state->localization_mutex);
         }
         pthread_mutex_unlock(&state->paths_mutexes[*color]);
-        std::cout << "unlocked mutexes" << std::endl;
 
         // if path, check if reached next point in path
 
         // wait until maebot thinks it has reached it's next point in the path
         pthread_mutex_lock(&state->paths_mutexes[*color]);
-        std::cout << "locked paths mutex before wait till maebot done" << std::endl;
         while(!state->reached_location[*color])
         {
             pthread_cond_wait(&state->paths_cvs[*color], &state->paths_mutexes[*color]);
         }
         pthread_mutex_unlock(&state->paths_mutexes[*color]);
-        std::cout << "maebot reached location" << std::endl;
 
         // check if maebot actually reached location:
         
         pthread_mutex_lock(&state->paths_mutexes[*color]);
-        std::cout << "locked paths mutex before checking if maebot reached location" << std::endl;
         pthread_mutex_lock(&state->localization_mutex);
-        std::cout << "locked localization mutex before checking if maebot reached location" << std::endl;
         if(!state->within_error(*color))
         {
             std::cout << "republishing destination" << std::endl;
@@ -421,6 +423,7 @@ static void* run_thread(void *data)
                 continue;
             }
             state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
+			state->publish_to_ui(*color, state->maebot_paths[*color]);
         }
         pthread_mutex_unlock(&state->localization_mutex);
         pthread_mutex_unlock(&state->paths_mutexes[*color]);

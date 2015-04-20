@@ -444,8 +444,8 @@ int main(){
 	pthread_create(&odometry_comm, NULL, lcm_comm, NULL);
 
 	//while(true){
-	//C.turn_90();
-	C.go_straight();
+	C.turn_90();
+	//C.go_straight();
 	//}
 
 

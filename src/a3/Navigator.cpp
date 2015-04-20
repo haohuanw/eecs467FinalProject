@@ -140,9 +140,9 @@ bool Navigator::nodeWithinError(eecs467::Point<double>& p, eecs467::Point<double
 eecs467::Point<double> Navigator::findClosestStart(eecs467::Point<double> p)
 {
     if(isNode(p)) return p;
-    eecs467::Point<double> closeNode;
+    /*eecs467::Point<double> closeNode;
     bool closeNodeWithinError = nodeWithinError(p, closeNode);
-    if(closeNodeWithinError) return closeNode;
+    if(closeNodeWithinError) return closeNode;*/
     std::pair<int, eecs467::Point<double>> retval = findClosestLine(p);
     if(isSamePoint(diagram_lines[retval.first].end, p))
         return p;

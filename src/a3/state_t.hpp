@@ -157,17 +157,23 @@ class state_t{
         }
 
         void maebot_dest_handler(const lcm::ReceiveBuffer* rbuf,const std::string& channel,const ui_dest_list_t *msg){
-            if(msg->num_way_points != 1){
+	    std::cout<<"receive the path with length: "<<msg->num_way_points<<std::endl;
+            /*if(msg->num_way_points != 1){
                 printf("Maebot Dest receive more than one dest, skip message\n");
                 return;
-            } 
+            } */
             if(msg->color == 3){
                 printf("Maebot color out of bound, skip message\n");
                 return;
             }
             pthread_mutex_lock(&data_mutex);
-            maebot_list[msg->color].curr_dest.x = msg->x_poses.front();
-            maebot_list[msg->color].curr_dest.y = msg->y_poses.front();
+			maebot_list[msg->color].path.clear();
+			for(int i=0;i<msg->num_way_points;++i){
+				eecs467::Point<double> p = {msg->x_poses[i],msg->y_poses[i]};
+				maebot_list[msg->color].path.push_back(p);
+			}
+            //maebot_list[msg->color].curr_dest.x = msg->x_poses.front();
+            //maebot_list[msg->color].curr_dest.y = msg->y_poses.front();
             printf("Receive dest for Maebot %d with dest (%f,%f)\n",msg->color,msg->x_poses.front(),msg->y_poses.front());
             pthread_mutex_unlock(&data_mutex);
         }

@@ -17,7 +17,7 @@ particle_data::particle_data(int numb, maebot_pose_t starting_loc,eecs467::Occup
     old_weight.reserve(number);
     old_pose.reserve(number);
 
-    double factor = 0.01;
+    double factor = 0.05;
     for(int i=0; i < number ; ++i){
         double x = starting_loc.x;
         double y = starting_loc.y;
@@ -31,7 +31,7 @@ particle_data::particle_data(int numb, maebot_pose_t starting_loc,eecs467::Occup
         maebot_pose_t newpose;
         newpose.x = x;
         newpose.y = y;
-        newpose.theta = M_PI/2.0;
+        newpose.theta = -M_PI/2.0;
         old_pose.push_back(newpose);
         pose.push_back(newpose);
 
@@ -119,6 +119,7 @@ void particle_data::resample(){
         //printf("get alpha: %f\n",alpha);
         while(weight_sum < alpha){
             //printf("old_weight %d %f %f\n",k,alpha,weight_sum);
+			if(k >= old_weight.size()) break;
             weight_sum += old_weight[k];
             ++k;
         }

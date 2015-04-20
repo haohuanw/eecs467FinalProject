@@ -114,26 +114,19 @@ int main()
     path = n.pathPlan(a, b);
     print(path);
 
-    /*a.x = 0;
-    a.y = 1.35;
-    std::pair<int, eecs467::Point<double>> retval;
-    retval = n.findClosestLine(a);
-    printPoint(retval);
+    a.x = 0.0633;
+    a.y = 1.282;
+    b.x = -0.539;
+    b.y = 0.6676;
+    path = n.pathPlan(a, b);
+    print(path);
 
-    a.x = 0;
-    a.y = 0.1;
-    retval = n.findClosestLine(a);
-    printPoint(retval);
-
-    a.x = -0.5;
-    a.y = -0.12;
-    retval = n.findClosestLine(a);
-    printPoint(retval);
-
-    a.x = -0.5625;
-    a.y = -0.125 - 0.0626;
-    retval = n.findClosestLine(a);
-    printPoint(retval);*/
+    a.x = 0.46;
+    a.y = -0.75;
+    b.x = -0.5;
+    b.y = -0.67;
+    path = n.pathPlan(a, b);
+    print(path);
 
     return 0;
 }

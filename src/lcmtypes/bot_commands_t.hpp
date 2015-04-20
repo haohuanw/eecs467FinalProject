@@ -14,6 +14,8 @@
 class bot_commands_t
 {
     public:
+        int64_t    utime;
+
         double     x_rob;
 
         double     y_rob;
@@ -23,10 +25,6 @@ class bot_commands_t
         double     x_dest;
 
         double     y_dest;
-
-        double     turning;
-
-        double     reach_dest;
 
     public:
         /**
@@ -124,6 +122,9 @@ int bot_commands_t::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
+    tlen = __int64_t_encode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
+
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->x_rob, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
@@ -139,18 +140,15 @@ int bot_commands_t::_encodeNoHash(void *buf, int offset, int maxlen) const
     tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->y_dest, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->turning, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_encode_array(buf, offset + pos, maxlen - pos, &this->reach_dest, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
     return pos;
 }
 
 int bot_commands_t::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
+
+    tlen = __int64_t_decode_array(buf, offset + pos, maxlen - pos, &this->utime, 1);
+    if(tlen < 0) return tlen; else pos += tlen;
 
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->x_rob, 1);
     if(tlen < 0) return tlen; else pos += tlen;
@@ -167,20 +165,13 @@ int bot_commands_t::_decodeNoHash(const void *buf, int offset, int maxlen)
     tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->y_dest, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->turning, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __double_decode_array(buf, offset + pos, maxlen - pos, &this->reach_dest, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
     return pos;
 }
 
 int bot_commands_t::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
-    enc_size += __double_encoded_array_size(NULL, 1);
-    enc_size += __double_encoded_array_size(NULL, 1);
+    enc_size += __int64_t_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
     enc_size += __double_encoded_array_size(NULL, 1);
@@ -191,7 +182,7 @@ int bot_commands_t::_getEncodedSizeNoHash() const
 
 int64_t bot_commands_t::_computeHash(const __lcm_hash_ptr *)
 {
-    int64_t hash = 0x9d8e18283938d4eeLL;
+    int64_t hash = 0x04aa5fb7d545a86fLL;
     return (hash<<1) + ((hash>>63)&1);
 }
 
