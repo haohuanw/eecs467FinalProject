@@ -190,18 +190,20 @@ class PID
             turning = true;
             double angle_rob = dest.theta_rob;
             double angle_dest = dest.theta_dest;
+            double init_diff = fabs(eecs467::angle_diff(angle_rob,angle_dest));
+            double curr_diff = fabs(eecs467::angle_diff(angle_rob,angle_dest));
             pthread_mutex_unlock(&command_mutex);
 
 
 
             //double angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
             //std::cout<<"turn_to_dest angle_diff: "<<angle_diff<<std::endl;
-            while(angle_rob < angle_dest * 0.9)    
+            while(init_diff-curr_diff < 0.9 * init_diff)    
             //while(fabs(angle_diff) > M_PI/60)
             {
                 if(stop_command) { wait_until_clear(cmd); }
-                    cmd.motor_left_speed =  -speed*((angle_dest - angle_rob)/abs(angle_dest))- 0.13;
-                    cmd.motor_right_speed = speed*((angle_dest - angle_rob)/abs(angle_dest)) + 0.13;
+                    cmd.motor_left_speed =  -speed*(curr_diff/init_diff)- 0.13;
+                    cmd.motor_right_speed = speed*(curr_diff/init_diff) + 0.13;
                     if(eecs467::angle_diff(angle_rob, angle_dest) > 0)
                     {
                         cmd.motor_left_speed = cmd.motor_left_speed;
@@ -221,6 +223,7 @@ class PID
                 pthread_mutex_lock(&command_mutex);
                 double angle_rob = dest.theta_rob;
                 double angle_dest = dest.theta_dest;
+                curr_diff = fabs(eecs467::angle_diff(angle_rob,angle_dest));
                 pthread_mutex_unlock(&command_mutex);
                 //angle_diff = eecs467::angle_diff(angle_dest, angle_rob);
             }

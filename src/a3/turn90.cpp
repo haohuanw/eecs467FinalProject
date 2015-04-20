@@ -216,7 +216,7 @@ struct Motion_Class{
 
 		pthread_mutex_unlock(&comms_m);
 		double angle_diff_dest = 90.0;
-		double speed = 0.064;
+		double speed = 0.08;
 		double angle_diff = 0;
 
 		//run until the robot has turned 90 degrees
@@ -231,8 +231,8 @@ struct Motion_Class{
 			if(angle_diff < 0.9*angle_diff_dest ){
 
 				usleep(5000);
-				msg.motor_left_speed =  -speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest))- 0.13;
-				msg.motor_right_speed = speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest)) + 0.13;
+				msg.motor_left_speed =  -0.8*speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest))- 0.13;
+				msg.motor_right_speed = 0.8*speed*((angle_diff_dest - angle_diff)/abs(angle_diff_dest)) + 0.13;
 				lcm_inst.publish("MAEBOT_MOTOR_COMMAND", &msg);
 				
 
