@@ -178,6 +178,7 @@ class state_t
             maebot_locations[color] = *msg;
             if(at_intersection_point(*msg) && !moving_through_intersection[color])
             {
+				std::cout << "reached intersection" << std::endl;
                 publish_stop_command(color);
                 pthread_mutex_lock(&waiting_queue_mutex);
                 waiting_queue.push(color);
@@ -188,6 +189,7 @@ class state_t
                     pthread_cond_wait(&waiting_queue_cv, &waiting_queue_mutex);
                 }
                 moving_through_intersection[color] = true;
+				std::cout << "moving through intersection" << std::endl;
             }
 			else
 			{
@@ -197,6 +199,7 @@ class state_t
 
             if(!waiting_queue.empty() && waiting_queue.front() == color && !in_intersection(color))
             {
+				std::cout << "out of intersection" << std::endl;
                 moving_through_intersection[color] = false;
                 waiting_queue.pop();
                 pthread_mutex_unlock(&waiting_queue_mutex);
@@ -333,9 +336,7 @@ class state_t
 
         bool in_intersection(maebot_color maebot)
         {
-            //pthread_mutex_lock(&localization_mutex);
             eecs467::Point<double> current_location = {maebot_locations[maebot].x, maebot_locations[maebot].y};
-            //pthread_mutex_unlock(&localization_mutex);
             for(uint i = 0; i < intersection_ranges.size(); i++)
             {
                 if(in_x_range(current_location.x, i) && in_y_range(current_location.y, i))
@@ -355,13 +356,12 @@ static void* run_thread(void *data)
     while (state->running)
     {
         pthread_mutex_lock(&state->dests_mutexes[*color]);
-        //std::cout << "locked dests_mutex before checking dests.empty()" << std::endl;
         while(state->maebot_dests[*color].empty())
         {
             pthread_cond_wait(&state->dests_cvs[*color], &state->dests_mutexes[*color]);
         }
         pthread_mutex_unlock(&state->dests_mutexes[*color]);
-        //std::cout << "exited first wait" << std::endl;
+		std::cout << "received destination" << std::endl;
 
         // if no path (not calculated yet), create path
         pthread_mutex_lock(&state->paths_mutexes[*color]);
@@ -405,6 +405,7 @@ static void* run_thread(void *data)
         if(!state->within_error(*color))
         {
             std::cout << "republishing destination" << std::endl;
+			state->reached_location[*color] = true;
             state->publish_to_maebot(*color, state->maebot_locations[*color], state->maebot_paths[*color].front());
         }
         else
@@ -415,7 +416,6 @@ static void* run_thread(void *data)
             {
                 std::cout << "popping dest off deque" << std::endl;
                 pthread_mutex_lock(&state->dests_mutexes[*color]);
-                std::cout << "grabbed dests mutex when path empty" << std::endl;
                 state->maebot_dests[*color].pop_front();
                 pthread_mutex_unlock(&state->dests_mutexes[*color]);
                 pthread_mutex_unlock(&state->localization_mutex);

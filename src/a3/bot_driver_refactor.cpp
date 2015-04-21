@@ -63,21 +63,22 @@ class state_t
 
         void command_handler(const lcm::ReceiveBuffer *rbuf, const string& channel, const bot_commands_t *msg)
         {
-            //std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
-            //            <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
+            std::cout << "received command (" <<msg->x_rob<<","<<msg->y_rob<<")->("
+                        <<msg->x_dest<<","<<msg->y_dest<<")"<< std::endl;
             pthread_mutex_lock(&pid.command_mutex);
             std::cout << "command handler" << std::endl;
             
             //if same dest, error correction for time lag
-            std::cout<<"Before pop:"<<odometry_updates.size()<<std::endl;
+            //std::cout<<"Before pop:"<<odometry_updates.size()<<std::endl;
             while(!odometry_updates.empty() && odometry_updates.front().timestamp < msg->utime)
             {
                 odometry_updates.pop_front();
             }
-            std::cout<<"After pop:"<<odometry_updates.size()<<std::endl;
+            //std::cout<<"After pop:"<<odometry_updates.size()<<std::endl;
             pid.dest.x_rob = msg->x_rob;
             pid.dest.y_rob = msg->y_rob;
             pid.dest.theta_rob = msg->theta_rob;
+			std::cout << "current position: (" << pid.dest.x_rob << ", " << pid.dest.y_rob << ", " << pid.dest.theta_rob << ")\n";
             for(uint i = 0; i < odometry_updates.size(); i++)
             {
                 pid.dest.x_rob += odometry_updates[i].delta_x;
@@ -146,7 +147,7 @@ class state_t
             double deltax = cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
             double deltay = sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg;
         	odometry_updates.push_back(odometry_data{msg->utime, deltax, deltay, d_theta});
-            std::cout<<"push back the odometry data"<<std::endl;
+            //std::cout<<"push back the odometry data"<<std::endl;
             pid.dest.x_rob = cos(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.x_rob;
             pid.dest.y_rob = sin(eecs467::wrap_to_pi(pid.dest.theta_rob + a))*ticks_avg + pid.dest.y_rob;
             pid.dest.theta_rob = eecs467::wrap_to_pi(d_theta + pid.dest.theta_rob);
@@ -181,7 +182,7 @@ int main(int argc, char* argv[])
             if(fabs(state.pid.theta_error()) > M_PI/12)
             {
                 usleep(100000);
-                //std::cout << "turn with theta error: " << state.pid.theta_error() << std::endl;
+                std::cout << "turn with theta error: " << state.pid.theta_error() << std::endl;
                 state.pid.turn_to_dest();
             }
             else
